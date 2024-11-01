@@ -1,0 +1,6 @@
+[submodule "backend/game-engine"]
+	path = backend/game-engine
+	url = git@github.com:mbledkowski/ug2024-game-engine.git
+[submodule "backend/prediction-engine"]
+	path = backend/prediction-engine
+	url = git@github.com:mbledkowski/ug2024-prediction-engine.git
