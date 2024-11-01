@@ -11,7 +11,8 @@ lazy val root = (project in file("."))
     resolvers += lilaMaven,
     libraryDependencies ++= Seq(
   munit % Test,
-  chess
+  chess,
+  chessTestKit % Test
  )
   )
 
