@@ -2,6 +2,7 @@ import "~/styles/globals.css";
 
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -13,8 +14,25 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
-      <body>{children}</body>
+<html lang="pl" className={`${GeistSans.variable}`}>
+      <body>
+        <header>
+          <nav>
+            <ul>
+              <li><Link href="/">Main Page</Link></li>
+              <li><Link href="/variant1">Variant 1</Link></li>
+              <li><Link href="/variant2">Variant 2</Link></li>
+              <li><Link href="/variant3">Variant 3</Link></li>
+            </ul>
+          </nav>
+        </header>
+
+        <main>{children}</main>
+
+        <footer>
+          <p>&copy; 2024 Chess Variants</p>
+        </footer>
+      </body>
     </html>
   );
 }
