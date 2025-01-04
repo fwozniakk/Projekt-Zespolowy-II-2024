@@ -22,12 +22,11 @@ export class Board {
   updateSquares() {
     this.squares = Array.from({length:5}, () => Array.from({length:5}, () => new Array(5).fill(null)));
     for (const piece of this.pieces) {
-      console.log(piece, piece.x, piece.y, piece.z,this.squares[piece.x-1][piece.y-1][piece.z-1]);
       this.squares[piece.x-1][piece.y-1][piece.z-1] = piece;
     }
   }
 
-  updateNotation() {
+  public updateNotation() {
     this.notation = "/";
     let xCounter = 0;
     for (let z = 4; z >= 0; z--) {
@@ -187,9 +186,6 @@ export class Board {
     this.notation = startNotation;
     [this.pieces, this.player] = this.parseNotation(startNotation);
     this.updateSquares();
-    this.updateNotation();
-    console.log(this.squares);
-    console.log(this.notation);
   }
 }
 
