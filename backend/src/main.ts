@@ -131,59 +131,59 @@ export class Board {
           }
           break;
         case "r":
-          pieces.push(new Piece("rook", "white", x, y, z))
-          x += 1;
-          break;
-        case "n":
-          pieces.push(new Piece("knight", "white", x, y, z))
-          x += 1;
-          break;
-        case "u":
-          pieces.push(new Piece("unicorn", "white", x, y, z))
-          x += 1;
-          break;
-        case "b":
-          pieces.push(new Piece("bishop", "white", x, y, z))
-          x += 1;
-          break;
-        case "q":
-          pieces.push(new Piece("queen", "white", x, y, z))
-          x += 1;
-          break;
-        case "k":
-          pieces.push(new Piece("king", "white", x, y, z))
-          x += 1;
-          break;
-        case "p":
-          pieces.push(new Piece("pawn", "white", x, y, z))
-          x += 1;
-          break;
-        case "R":
           pieces.push(new Piece("rook", "black", x, y, z))
           x += 1;
           break;
-        case "N":
+        case "n":
           pieces.push(new Piece("knight", "black", x, y, z))
           x += 1;
           break;
-        case "U":
+        case "u":
           pieces.push(new Piece("unicorn", "black", x, y, z))
           x += 1;
           break;
-        case "B":
+        case "b":
           pieces.push(new Piece("bishop", "black", x, y, z))
           x += 1;
           break;
-        case "Q":
+        case "q":
           pieces.push(new Piece("queen", "black", x, y, z))
           x += 1;
           break;
-        case "K":
+        case "k":
           pieces.push(new Piece("king", "black", x, y, z))
           x += 1;
           break;
-        case "P":
+        case "p":
           pieces.push(new Piece("pawn", "black", x, y, z))
+          x += 1;
+          break;
+        case "R":
+          pieces.push(new Piece("rook", "white", x, y, z))
+          x += 1;
+          break;
+        case "N":
+          pieces.push(new Piece("knight", "white", x, y, z))
+          x += 1;
+          break;
+        case "U":
+          pieces.push(new Piece("unicorn", "white", x, y, z))
+          x += 1;
+          break;
+        case "B":
+          pieces.push(new Piece("bishop", "white", x, y, z))
+          x += 1;
+          break;
+        case "Q":
+          pieces.push(new Piece("queen", "white", x, y, z))
+          x += 1;
+          break;
+        case "K":
+          pieces.push(new Piece("king", "white", x, y, z))
+          x += 1;
+          break;
+        case "P":
+          pieces.push(new Piece("pawn", "white", x, y, z))
           x += 1;
           break;
         default:
@@ -208,15 +208,24 @@ export class Board {
     return [pieces, player];
   }
 
-  constructor(private startNotation: string = "/rnknr/ppppp/5/5/5//buqbu/ppppp/5/5/5//5/5/5/5/5//5/5/5/PPPPP/BUQBU//5/5/5/PPPPP/RNKNR/#w#") {
-    this.notation = startNotation;
-    [this.pieces, this.player] = this.parseNotation(startNotation);
-    this.updateSquares();
+  constructor(initArgs: {startNotation: string} | {pieces: Piece[], player: color} = {startNotation: "/rnknr/ppppp/5/5/5//buqbu/ppppp/5/5/5//5/5/5/5/5//5/5/5/PPPPP/BUQBU//5/5/5/PPPPP/RNKNR/#w#"}) {
+    if ("startNotation" in initArgs) {
+      const startNotation = initArgs.startNotation;
+      this.notation = startNotation;
+      [this.pieces, this.player] = this.parseNotation(startNotation);
+      this.updateSquares();
+    } else {
+      this.notation = "";
+      this.pieces = initArgs.pieces;
+      this.player = initArgs.player;
+      this.updateSquares();
+      this.updateNotation();
+    }
   }
 
   private generateMovesInDirection(pos: Position, xDir: number, yDir: number, zDir: number) {
     const moves: Move[] = [];
-    const currentPos = new Position(pos.x + xDir, pos.y + yDir, pos.z + zDir);
+    let currentPos = new Position(pos.x + xDir, pos.y + yDir, pos.z + zDir);
     while (currentPos.x > 0 && currentPos.x <= 5 &&
            currentPos.y > 0 && currentPos.y <= 5 &&
            currentPos.z > 0 && currentPos.z <= 5) {
@@ -228,6 +237,7 @@ export class Board {
         break;
       }
       moves.push(new Move(pos, currentPos));
+      currentPos = new Position(currentPos.x + xDir, currentPos.y + yDir, currentPos.z + zDir);
     }
     return moves;
   }
@@ -287,21 +297,130 @@ export class Board {
       }
       switch (piece.type) {
         case "pawn":
+          const [x,y,z] = [piece.x, piece.y, piece.z];
+          assert.equal(((piece.color === "white" && z < 5 && y < 5) || (piece.color === "black" && z > 1 && y > 1)), true, "Pawn should be promoted");
+          const sqrs = this.squares
+          if (piece.color === "white") {
+            // Forward
+            if (sqrs[x-1][y][z-1] === null) {
+              moves.push(new Move(new Position(x, y, z), new Position(x, y + 1, z)));
+            }
+            if (sqrs[x-1][y-1][z] === null) {
+              moves.push(new Move(new Position(x, y, z), new Position(x, y, z + 1)));
+            }
+
+            // Capture
+            if (x > 1 && sqrs[x-2][y][z-1] !== null && sqrs[x-2][y][z-1]!.color === "black") {
+              moves.push(new Move(new Position(x, y, z), new Position(x - 1, y + 1, z)));
+            }
+            if (x < 5 && sqrs[x][y][z-1] !== null && sqrs[x][y][z-1]!.color === "black") {
+              moves.push(new Move(new Position(x, y, z), new Position(x + 1, y + 1, z)));
+            }
+            if (x > 1 && sqrs[x-2][y-1][z] !== null && sqrs[x-2][y-1][z]!.color === "black") {
+              moves.push(new Move(new Position(x, y, z), new Position(x - 1, y, z+1)));
+            }
+            if (x < 5 && sqrs[x][y-1][z] !== null && sqrs[x][y-1][z]!.color === "black") {
+              moves.push(new Move(new Position(x, y, z), new Position(x + 1, y, z+1)));
+            }
+          } else {
+            // Forward
+            if (sqrs[x-1][y-2][z-1] === null) {
+              moves.push(new Move(new Position(x, y, z), new Position(x, y - 1, z)));
+            }
+            if (sqrs[x-1][y-1][z-2] === null) {
+              moves.push(new Move(new Position(x, y, z), new Position(x, y, z - 1)));
+            }
+
+            // Capture
+            if (x > 1 && sqrs[x-2][y-2][z-1] !== null && sqrs[x-2][y-2][z-1]!.color === "white") {
+              moves.push(new Move(new Position(x, y, z), new Position(x - 1, y - 1, z)));
+            }
+            if (x < 5 && sqrs[x][y-2][z-1] !== null && sqrs[x][y-2][z-1]!.color === "white") {
+              moves.push(new Move(new Position(x, y, z), new Position(x + 1, y - 1, z)));
+            }
+            if (x > 1 && sqrs[x-2][y-1][z-2] !== null && sqrs[x-2][y-1][z-2]!.color === "white") {
+              moves.push(new Move(new Position(x, y, z), new Position(x - 1, y, z-1)));
+            }
+            if (x < 5 && sqrs[x][y-1][z-2] !== null && sqrs[x][y-1][z-2]!.color === "white") {
+              moves.push(new Move(new Position(x, y, z), new Position(x + 1, y, z-1)));
+            }
+          }
           break;
         case "knight":
+          for(let i = 0; i < 6; i++) {
+            for (let dir = -1; dir <= 1; dir += 2){
+              for (let dir2 = -2; dir2 <= 2; dir2 += 4){
+                let dirs: number[];
+                if (i%2 === 0) {
+                  dirs = [dir2, dir];
+                } else {
+                  dirs = [dir, dir2]
+                }
+                dirs.splice(i%3, 0, 0);
+                const [x, y, z] = [piece.x, piece.y, piece.z];
+                const [xDir, yDir, zDir] = dirs;
+
+                if (Math.min(x + xDir, y + yDir, z + zDir) < 1 || Math.max(x + xDir, y + yDir, z + zDir) > 5) {
+                  continue;
+                }
+                  
+                if (this.squares[x + xDir - 1][y + yDir - 1][z + zDir - 1] === null || this.squares[x + xDir - 1][y + yDir - 1][z + zDir - 1]!.color !== this.player) {
+                  moves.push(new Move(new Position(piece.x, piece.y, piece.z), new Position(piece.x + xDir, piece.y + yDir, piece.z + zDir)));
+                }
+              }
+            }
+          }
           break;
         case "king":
+          for (let xDir = -1; xDir <= 1; xDir++){
+            for (let yDir = -1; yDir <= 1; yDir++){
+              for (let zDir = -1; zDir <= 1; zDir++){
+                if (xDir === 0 && yDir === 0 && zDir === 0) { // Theoretically unnecessary
+                  continue; // Cannot move into itself
+                }
+                const [x, y, z] = [piece.x, piece.y, piece.z];
+                if (Math.min(x + xDir, y + yDir, z + zDir) < 1 || Math.max(x + xDir, y + yDir, z + zDir) > 5) {
+                  continue;
+                }
+                if (this.squares[x + xDir - 1][y + yDir - 1][z + zDir - 1] === null || this.squares[x + xDir - 1][y + yDir - 1][z + zDir - 1]!.color !== this.player) {
+                  moves.push(new Move(new Position(x, y, z), new Position(x + xDir, y + yDir, z + zDir)));
+                }
+              }
+            }
+          }
           break;
         default:
           moves.push(...this.generateSlidingMoves(new Position(piece.x, piece.y, piece.z), piece.type));
+          break;
       }
     }
     return moves;
   }
-  public possibleMovesLegal(): Move[] {
+  public possibleMoves(): Move[] {
     //TODO
     return this.possibleMovesPseudoLegal();
   }
+  public applyMove(move: Move): Board {
+    const piece = this.squares[move.from.x-1][move.from.y-1][move.from.z-1];
+    assert(piece !== null);
+    assert(piece.color === this.player);
+    const targetPiece = this.squares[move.to.x-1][move.to.y-1][move.to.z-1];
+    assert(targetPiece === null || targetPiece.color !== this.player);
+    const pieces = this.pieces
+    pieces.filter(p => p === piece)
+    if (targetPiece !== null) {
+      pieces.filter(p => p === targetPiece)
+    }
+    pieces.push(new Piece(piece.type, piece.color, move.to.x, move.to.y, move.to.z));
+    const updatedBoard = new Board({pieces: pieces, player: (this.player === "white") ? "black" : "white"});
+    return updatedBoard;
+  }
+  public canCaptureKing(): boolean {
+    //TODO
+  }
 }
 
-new Board();
+const board = new Board();
+console.log(board.possibleMoves());
+console.log(board.possibleMoves().length);
+console.log("Executed!")
