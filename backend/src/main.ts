@@ -397,8 +397,15 @@ export class Board {
     return moves;
   }
   public possibleMoves(): Move[] {
-    //TODO
-    return this.possibleMovesPseudoLegal();
+    const pseudoMoves = this.possibleMovesPseudoLegal();
+    const legalMoves: Move[] = [];
+    for (const move of pseudoMoves) {
+      const newBoard = this.applyMove(move);
+      if (!newBoard.canCaptureKing()) {
+        legalMoves.push(move);
+      }
+    }
+    return legalMoves;
   }
   public applyMove(move: Move): Board {
     const piece = this.squares[move.from.x-1][move.from.y-1][move.from.z-1];
@@ -406,7 +413,7 @@ export class Board {
     assert(piece.color === this.player);
     const targetPiece = this.squares[move.to.x-1][move.to.y-1][move.to.z-1];
     assert(targetPiece === null || targetPiece.color !== this.player);
-    const pieces = this.pieces
+    const pieces = [...this.pieces]
     pieces.filter(p => p === piece)
     if (targetPiece !== null) {
       pieces.filter(p => p === targetPiece)
@@ -415,12 +422,17 @@ export class Board {
     const updatedBoard = new Board({pieces: pieces, player: (this.player === "white") ? "black" : "white"});
     return updatedBoard;
   }
+
   public canCaptureKing(): boolean {
-    //TODO
+    const moves = this.possibleMovesPseudoLegal();
+    for (const move of moves) {
+      const piece = this.squares[move.to.x-1][move.to.y-1][move.to.z-1];
+      if (piece !== null && piece.type === "king" && piece.color !== this.player) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
 const board = new Board();
-console.log(board.possibleMoves());
-console.log(board.possibleMoves().length);
-console.log("Executed!")
