@@ -4,8 +4,15 @@ type type = "pawn" | "rook" | "knight" | "bishop" | "queen" | "king" | "unicorn"
 type shortType = "p" | "r" | "n" | "b" | "q" | "k" | "u";
 type color = "white" | "black";
 
-class Position {
+export class Position {
+  alphabet = "abcde";
   constructor(public x: number, public y: number, public z: number) {}
+  toString() {
+    const z = this.alphabet[this.z - 1].toUpperCase();
+    const y = this.y.toString();
+    const x = this.alphabet[this.x - 1];
+    return z+x+y; 
+  }
 }
 
 class Piece extends Position {
@@ -35,7 +42,7 @@ class Piece extends Position {
   }
 }
 
-class Move {
+export class Move {
   constructor(public from: Position, public to: Position) {}
 }
 
@@ -69,25 +76,25 @@ export class Board {
             let char = "";
             switch (piece.type) {
               case "pawn":
-                char = piece.color === "white" ? "p" : "P";
-                break;
-              case "rook":
-                char = piece.color === "white" ? "r" : "R";
-                break;
-              case "knight":
-                char = piece.color === "white" ? "n" : "N";
-                break;
-              case "bishop":
-                char = piece.color === "white" ? "b" : "B";
-                break;
-              case "queen":
-                char = piece.color === "white" ? "q" : "Q";
-                break;
-              case "king":
-                char = piece.color === "white" ? "k" : "K";
-                break;
-              case "unicorn":
-                char = piece.color === "white" ? "u" : "U";
+                char = piece.color === "white" ? "P" : "p";
+                break;                           
+              case "rook":                       
+                char = piece.color === "white" ? "R" : "r";
+                break;                           
+              case "knight":                     
+                char = piece.color === "white" ? "N" : "n";
+                break;                           
+              case "bishop":                     
+                char = piece.color === "white" ? "B" : "b";
+                break;                           
+              case "queen":                      
+                char = piece.color === "white" ? "Q" : "q";
+                break;                           
+              case "king":                       
+                char = piece.color === "white" ? "K" : "k";
+                break;                           
+              case "unicorn":                    
+                char = piece.color === "white" ? "U" : "u";
                 break;
             }
             this.notation += char;
@@ -435,4 +442,9 @@ export class Board {
   }
 }
 
-const board = new Board();
+// const board = new Board();
+
+// const legalMoves = board.possibleMoves();
+// for (const move of legalMoves) {
+//   console.log(`new Move(new Position(${move.from.x}, ${move.from.y}, ${move.from.z}), new Position(${move.to.x}, ${move.to.y}, ${move.to.z}))`);
+// }
