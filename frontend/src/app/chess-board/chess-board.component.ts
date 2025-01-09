@@ -8,7 +8,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
   standalone: true,
   imports: [],
   templateUrl: './chess-board.component.html',
-  styleUrls: ['./chess-board.component.scss'], 
+  styleUrls: ['./chess-board.component.scss'],
 })
 export class ChessBoardComponent implements OnInit {
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;
@@ -16,7 +16,7 @@ export class ChessBoardComponent implements OnInit {
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
-  private controls!: OrbitControls; 
+  private controls!: OrbitControls;
 
   ngOnInit(): void {
     this.initThree();
@@ -41,21 +41,21 @@ export class ChessBoardComponent implements OnInit {
     const light = new THREE.DirectionalLight(0xffffff, 2);
     light.position.set(10, 10, 10).normalize();
     this.scene.add(light);
-    
-    const ambientLight = new THREE.AmbientLight(0x404040, 2); 
-    this.scene.add(ambientLight);    
+
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    this.scene.add(ambientLight);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true; 
+    this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.minDistance = 7; 
-    this.controls.maxDistance = 50; 
+    this.controls.minDistance = 7;
+    this.controls.maxDistance = 50;
   }
 
   private createRaumschachBoard(): void {
     const boardSize = 5;
     const cubeSize = 1;
-    const gap = 0.1;
+    const gap = 0;
     const totalSize = boardSize * (cubeSize + gap);
 
     for (let x = 0; x < boardSize; x++) {
@@ -63,7 +63,7 @@ export class ChessBoardComponent implements OnInit {
         for (let z = 0; z < boardSize; z++) {
           const isDark = (x + y + z) % 2 === 0;
           const color = isDark ? 0x000000 : 0xffffff;
-          const material = new THREE.MeshBasicMaterial({ color });
+          const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.4 });
           const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
           const cell = new THREE.Mesh(geometry, material);
           cell.position.set(
@@ -97,7 +97,7 @@ export class ChessBoardComponent implements OnInit {
 
   private animate(): void {
     requestAnimationFrame(() => this.animate());
-    this.controls.update(); 
+    this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
 }
