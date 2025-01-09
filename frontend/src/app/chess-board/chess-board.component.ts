@@ -1,6 +1,6 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'; // Import OrbitControls
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 @Component({
@@ -38,19 +38,17 @@ export class ChessBoardComponent implements OnInit {
     this.renderer.setSize(width, height);
     this.canvasContainer.nativeElement.appendChild(this.renderer.domElement);
 
-    // Add lights
-    const light = new THREE.DirectionalLight(0xffffff, 1);
+    const light = new THREE.DirectionalLight(0xffffff, 2);
     light.position.set(10, 10, 10).normalize();
     this.scene.add(light);
+    
+    const ambientLight = new THREE.AmbientLight(0x404040, 2); 
+    this.scene.add(ambientLight);    
 
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    this.scene.add(ambientLight);
-
-    // Add OrbitControls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true; 
     this.controls.dampingFactor = 0.05;
-    this.controls.minDistance = 5; 
+    this.controls.minDistance = 7; 
     this.controls.maxDistance = 50; 
   }
 
@@ -81,11 +79,20 @@ export class ChessBoardComponent implements OnInit {
 
   private loadChessPieces(): void {
     const loader = new GLTFLoader();
-    loader.load('./resources/whorse.glb', (gltf: any) => {
-      const piece = gltf.scene;
-      piece.position.set(0, 0.5, 0); 
-      this.scene.add(piece);
-    });
+    loader.load(
+      'whorse.glb',
+      (gltf) => {
+        console.log('Model załadowany:', gltf);
+        const piece = gltf.scene;
+        piece.position.set(0, 0, 5);
+        piece.scale.set(0.5, 0.5, 0.5);
+        this.scene.add(piece);
+      },
+      undefined,
+      (error) => {
+        console.error('Błąd ładowania modelu:', error);
+      }
+    );
   }
 
   private animate(): void {
