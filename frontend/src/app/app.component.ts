@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ChessBoardComponent } from './chess-board/chess-board.component';
+import { ClassicChessBoardComponent } from './modules/classic-chess-board/classic-chess-board.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, ChessBoardComponent],
+  imports: [RouterOutlet, ChessBoardComponent, ClassicChessBoardComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   providers: [
