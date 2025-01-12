@@ -1,10 +1,11 @@
 import { Component, ElementRef, AfterViewInit, OnDestroy  } from '@angular/core';
 import { Board } from '../../logic/board';
-import { FENChar, Side } from '../../logic/models';
+import { AvailablePositions, FENChar, Move, Side } from '../../logic/models';
 import { CommonModule } from '@angular/common';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { SelectedPosition } from './models';
 
 
 @Component({
@@ -18,6 +19,10 @@ export class ClassicChessBoardComponent {
   private board = new Board();
   public boardView: (FENChar | null)[][] = this.board.playerBoard;
   public get playerSide(): Side { return this.board.playerSide }
+  private selectedPosition: SelectedPosition = { unit: null };
+  private unitAvailablePositions: Move[] = [];
+  public get availablePositions(): AvailablePositions { return this.board.availablePositions}
+
 
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
@@ -26,6 +31,8 @@ export class ClassicChessBoardComponent {
   private pieceMeshes: Map<string, THREE.Mesh> = new Map();
   private controls!: OrbitControls;
   private loader = new GLTFLoader();
+  private raycaster = new THREE.Raycaster();
+  private mouse = new THREE.Vector2();
 
   constructor(private elRef: ElementRef) {}
 
@@ -34,10 +41,12 @@ export class ClassicChessBoardComponent {
     this.addChessBoard();
     this.addPieces();
     this.animate();
+    window.addEventListener('click', this.onMouseClick.bind(this));
   }
 
   ngOnDestroy(): void {
     this.renderer.dispose();
+    window.removeEventListener('click', this.onMouseClick.bind(this));
   }
 
   private getBoardCenter(): THREE.Vector3 {
@@ -157,6 +166,82 @@ export class ClassicChessBoardComponent {
       }
     }
   }
+
+  public isPositionSelected(x: number, y: number): boolean {
+    if (!this.selectedPosition.unit) return false;
+    return this.selectedPosition.x === x && this.selectedPosition.y === y;
+  }
+
+  public isPositionAvailableForSelectedUnit(x: number, y: number): boolean {
+    return this.unitAvailablePositions.some(position => position.x === x && position.y === y)
+  }
+
+
+  private onMouseClick(event: MouseEvent): void {
+    const container = this.elRef.nativeElement.querySelector('#chess-board-container');
+    const rect = container.getBoundingClientRect();
+  
+    // Calculate mouse position in normalized device coordinates (-1 to +1)
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  
+    // Update the raycaster
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+  
+    // Check intersections with the chessboard squares
+    const intersects = this.raycaster.intersectObjects(this.chessBoard.children);
+  
+    if (intersects.length > 0) {
+      const intersectedSquare = intersects[0].object;
+  
+      // Convert to board coordinates
+      const { x, z } = intersectedSquare.position;
+      const boardX = Math.round(x);
+      const boardY = Math.round(z);
+  
+      // Highlight the board square
+      this.highlightSquare(intersectedSquare);
+  
+      // Optionally handle unit selection
+      const unit = this.boardView[boardX][boardY];
+      if (unit) {
+        this.selectedPosition = { unit, x: boardX, y: boardY };
+        this.unitAvailablePositions = this.availablePositions.get(boardX + "," + boardY) || [];
+        console.log(`Selected unit at position (${boardX}, ${boardY}):`, unit);
+      } else {
+        console.log(`No unit at position (${boardX}, ${boardY})`);
+      }
+    } else {
+      this.clearHighlight();
+    }
+  }
+  
+  private highlightedSquare: THREE.Object3D | null = null;
+  
+  private highlightSquare(square: THREE.Object3D): void {
+    this.clearHighlight();
+  
+    // Apply highlight to the square
+    if (square instanceof THREE.Mesh) {
+      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xF79824 }); // selection color
+      square.userData['originalMaterial'] = square.material; // Save original material
+      square.material = highlightMaterial;
+    }
+  
+    this.highlightedSquare = square;
+  }
+  
+  private clearHighlight(): void {
+    if (this.highlightedSquare && this.highlightedSquare instanceof THREE.Mesh) {
+      const originalMaterial = this.highlightedSquare.userData['originalMaterial'];
+      if (originalMaterial) {
+        this.highlightedSquare.material = originalMaterial;
+      }
+    }
+    this.highlightedSquare = null;
+  }
+  
+  
 
   private animate(): void {
     requestAnimationFrame(() => this.animate());

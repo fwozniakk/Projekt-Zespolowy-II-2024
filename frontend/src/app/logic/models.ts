@@ -22,3 +22,5 @@ export enum FENChar {
     BlackQueen = "q",
     BlackKing = "k",
 }
+
+export type AvailablePositions = Map<string, Move[]>;
