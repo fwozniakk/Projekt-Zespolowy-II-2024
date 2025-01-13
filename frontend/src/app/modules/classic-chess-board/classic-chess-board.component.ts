@@ -167,10 +167,6 @@ export class ClassicChessBoardComponent {
     }
   }
 
-  public isPositionSelected(x: number, y: number): boolean {
-    if (!this.selectedPosition.unit) return false;
-    return this.selectedPosition.x === x && this.selectedPosition.y === y;
-  }
 
   public isPositionAvailableForSelectedUnit(x: number, y: number): boolean {
     return this.unitAvailablePositions.some(position => position.x === x && position.y === y)
@@ -200,16 +196,28 @@ export class ClassicChessBoardComponent {
       const boardY = Math.round(z);
   
       // Highlight the board square
-      this.highlightSquare(intersectedSquare);
   
       // Optionally handle unit selection
       const unit = this.boardView[boardX][boardY];
       if (unit) {
+        this.highlightSquare(intersectedSquare);
         this.selectedPosition = { unit, x: boardX, y: boardY };
         this.unitAvailablePositions = this.availablePositions.get(boardX + "," + boardY) || [];
+        
+        this.unitAvailablePositions.forEach((move) => {
+          const targetSquare = this.chessBoard.children.find(
+            (child: any) =>
+              Math.round(child.position.x) === move.x && Math.round(child.position.z) === move.y
+          );
+          if (targetSquare) {
+            this.highlightAvailablePositions(targetSquare);
+          }
+        });
+        
         console.log(`Selected unit at position (${boardX}, ${boardY}):`, unit);
       } else {
         console.log(`No unit at position (${boardX}, ${boardY})`);
+        //this.clearHighlight();
       }
     } else {
       this.clearHighlight();
@@ -217,6 +225,7 @@ export class ClassicChessBoardComponent {
   }
   
   private highlightedSquare: THREE.Object3D | null = null;
+  private highlightedSquares: THREE.Object3D[] = [];
   
   private highlightSquare(square: THREE.Object3D): void {
     this.clearHighlight();
@@ -230,6 +239,16 @@ export class ClassicChessBoardComponent {
   
     this.highlightedSquare = square;
   }
+
+  private highlightAvailablePositions(square: THREE.Object3D): void {
+    if (square instanceof THREE.Mesh) {
+      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // available position color
+      square.userData['originalMaterial'] = square.material; // Save original material
+      square.material = highlightMaterial;
+      this.highlightedSquares.push(square);
+    }
+  }
+  
   
   private clearHighlight(): void {
     if (this.highlightedSquare && this.highlightedSquare instanceof THREE.Mesh) {
@@ -239,6 +258,16 @@ export class ClassicChessBoardComponent {
       }
     }
     this.highlightedSquare = null;
+
+    this.highlightedSquares.forEach((square) => {
+      if (square instanceof THREE.Mesh) {
+        const originalMaterial = square.userData['originalMaterial'];
+        if (originalMaterial) {
+          square.material = originalMaterial;
+        }
+      }
+    });
+    this.highlightedSquares = [];
   }
   
   
