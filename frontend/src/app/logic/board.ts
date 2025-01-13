@@ -121,13 +121,19 @@ export class Board {
 
                     // no moving 2 spots or 1 for pawn if there is an unit right in front
                     if (unit instanceof Pawn) {
-                        if (dx === 2 || dx === - 2) {
-                            if (newUnit) continue;
-                            if (this.board[newX + (dx === 2 ? -1 : 1)][newY]) continue;
-                        } 
-                        if ((dx === 1 || dx === - 1) && dy === 0 && newUnit) continue;
-                        if ((dx === 1 || dx === - 1) && (!newUnit || newUnit.side === unit.side)) continue; 
+                        const direction = unit.side === Side.White ? 1 : -1;
+                    
+                        // ruch dwa pola w przód - tylko z pozycji startowej
+                        if (dx === 2 * direction || dx === -2 * direction) {
+                            const startRow = unit.side === Side.White ? 1 : this.boardSize - 2; 
+                            if (x !== startRow) continue;
+                            if (newUnit) continue; // pole docelowe nie może być zajęte
+                            if (this.board[x + direction][y]) continue; // pole pomiędzy musi być puste
+                        }
+                    
+                        if (dx === direction && dy === 0 && newUnit) continue;
 
+                        if (dx === direction && Math.abs(dy) === 1 && (!newUnit || newUnit.side === unit.side)) continue;
                     }
 
 
