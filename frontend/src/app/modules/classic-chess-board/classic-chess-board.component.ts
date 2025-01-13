@@ -232,7 +232,7 @@ export class ClassicChessBoardComponent {
   
     // Apply highlight to the square
     if (square instanceof THREE.Mesh) {
-      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xF79824 }); // selection color
+      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xF79824, transparent: true, opacity: 0.95 }); // selection color
       square.userData['originalMaterial'] = square.material; // Save original material
       square.material = highlightMaterial;
     }
@@ -242,9 +242,18 @@ export class ClassicChessBoardComponent {
 
   private highlightAvailablePositions(square: THREE.Object3D): void {
     if (square instanceof THREE.Mesh) {
-      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // available position color
-      square.userData['originalMaterial'] = square.material; // Save original material
-      square.material = highlightMaterial;
+      square.userData['originalMaterial'] = square.material;
+      // add a circle to the center of the square
+      const circleGeometry = new THREE.CircleGeometry(0.3, 32); 
+      const circleMaterial = new THREE.MeshBasicMaterial({ color: 0xF79824, transparent: true, opacity: 0.7 });
+      const circleMesh = new THREE.Mesh(circleGeometry, circleMaterial);
+
+      circleMesh.position.set(square.position.x, square.position.y + 0.06, square.position.z);
+      circleMesh.rotation.x = -Math.PI / 2; 
+
+      this.scene.add(circleMesh);
+
+      square.userData['highlightCircle'] = circleMesh;
       this.highlightedSquares.push(square);
     }
   }
@@ -264,6 +273,11 @@ export class ClassicChessBoardComponent {
         const originalMaterial = square.userData['originalMaterial'];
         if (originalMaterial) {
           square.material = originalMaterial;
+        }
+        const circleMesh = square.userData['highlightCircle'];
+        if (circleMesh) {
+          this.scene.remove(circleMesh);
+          delete square.userData['highlightCircle'];
         }
       }
     });
