@@ -139,18 +139,8 @@ export class ClassicChessBoardComponent {
               model.position.set(x, 0, z);
               model.scale.set(0.8, 0.8, 0.8); 
 
-              /*model.traverse((child: any) => {
-                if (child.isMesh) {
-                  child.material = new THREE.MeshStandardMaterial({
-                    color: piece === piece.toUpperCase() ? 0xffffff : 0x000000,
-                    metalness: 0.5,
-                    roughness: 0.5,
-                  });
-                }
-              });*/
-
               if (piece === 'N') {
-                model.rotation.y = Math.PI / 2; // Obrót konia
+                model.rotation.y = Math.PI / 2; // rotate horse
               } else if (piece === 'n') {
                 model.rotation.y = -Math.PI / 2;
               }
@@ -170,6 +160,24 @@ export class ClassicChessBoardComponent {
 
   public isPositionAvailableForSelectedUnit(x: number, y: number): boolean {
     return this.unitAvailablePositions.some(position => position.x === x && position.y === y)
+  }
+
+  private isWrongFieldSelected(field: FENChar): boolean {
+    const isWhiteFieldSelected: boolean = field === field.toUpperCase();
+    return isWhiteFieldSelected && this.playerSide === Side.Black ||
+    !isWhiteFieldSelected && this.playerSide === Side.White;
+  }
+
+  private moveUnit(newX: number, newY: number): void {
+    if (!this.selectedPosition.unit) return;
+    if (!this.isPositionAvailableForSelectedUnit(newX, newY)) return;
+
+    const { x: prevX, y: prevY } = this.selectedPosition;
+    this.board.move(prevX, prevY, newX, newY);
+    this.boardView = this.board.playerBoard;
+
+    this.syncPiecesWithBoardView(); 
+    console.log(this.boardView)
   }
 
 
@@ -195,11 +203,19 @@ export class ClassicChessBoardComponent {
       const boardX = Math.round(x);
       const boardY = Math.round(z);
   
-      // Highlight the board square
+      if (this.selectedPosition.unit) {
+        if (this.isPositionAvailableForSelectedUnit(boardX, boardY)) {
+          this.moveUnit(boardX, boardY); // Move the selected piece
+          this.clearHighlight();
+          this.selectedPosition = { unit: null }; 
+          return;
+        }
+      }
   
       // Optionally handle unit selection
       const unit = this.boardView[boardX][boardY];
-      if (unit) {
+      
+      if (unit && !this.isWrongFieldSelected(unit)) {
         this.highlightSquare(intersectedSquare);
         this.selectedPosition = { unit, x: boardX, y: boardY };
         this.unitAvailablePositions = this.availablePositions.get(boardX + "," + boardY) || [];
@@ -223,6 +239,80 @@ export class ClassicChessBoardComponent {
       this.clearHighlight();
     }
   }
+
+  private getPieceFile(piece: string): string | null {
+    const pieceFiles: { [key: string]: string } = {
+      P: 'wpawn.glb',
+      R: 'wrook.glb',
+      N: 'whorse.glb',
+      B: 'wbishop.glb',
+      Q: 'wqueen.glb',
+      K: 'wking.glb',
+      p: 'bpawn.glb',
+      r: 'brook.glb',
+      n: 'bhorse.glb',
+      b: 'bbishop.glb',
+      q: 'bqueen.glb',
+      k: 'bking.glb',
+    };
+  
+    return pieceFiles[piece] || null;
+  }
+
+private syncPiecesWithBoardView(): void {
+  const newPieceMeshes = new Map<string, THREE.Mesh>();
+
+  for (let x = 0; x < this.boardView.length; x++) {
+    for (let z = 0; z < this.boardView[x].length; z++) {
+      const piece = this.boardView[x][z];
+      const key = `${x},${z}`;
+
+      if (piece) {
+        if (this.pieceMeshes.has(key)) {
+          // Jeśli model już istnieje, zachowaj go
+          const mesh = this.pieceMeshes.get(key)!;
+          mesh.position.set(x, 0, z); // Ustaw poprawną pozycję
+          newPieceMeshes.set(key, mesh);
+        } else {
+          // Jeśli figura jest nowa, załaduj i dodaj ją
+          const fileName = this.getPieceFile(piece);
+          if (fileName) {
+            this.loader.load(`/${fileName}`, (gltf: any) => {
+              const model = gltf.scene.clone();
+              model.position.set(x, 0, z);
+              model.scale.set(0.8, 0.8, 0.8);
+
+              this.scene.add(model);
+              newPieceMeshes.set(key, model);
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Usuń zbite lub przesunięte figury
+  this.pieceMeshes.forEach((mesh, key) => {
+    if (!newPieceMeshes.has(key)) {
+      this.scene.remove(mesh);
+
+      // Bezpieczne usuwanie geometrii i materiałów
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach(mat => mat.dispose());
+      } else if (mesh.material) {
+        mesh.material.dispose();
+      }
+    }
+  });
+
+  // Zaktualizuj mapę figur
+  this.pieceMeshes = newPieceMeshes;
+}
+
+  
   
   private highlightedSquare: THREE.Object3D | null = null;
   private highlightedSquares: THREE.Object3D[] = [];

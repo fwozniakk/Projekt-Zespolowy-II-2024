@@ -13,18 +13,18 @@ export class King extends Unit {
         {x: -1, y: 0},
         {x: -1, y: 1},
     ];
-    private _canCastle = false;
+    private _moved = false;
 
     constructor(private unitSide: Side){
         super(unitSide);
         this._fenChar = unitSide === Side.White ? FENChar.WhiteKing : FENChar.BlackKing
     }
 
-    public get canCastle(): boolean {
-        return this._canCastle;
+    public get moved(): boolean {
+        return this._moved;
     }  
 
-    public set canCastle(_) {
-        this._canCastle = true;
+    public set moved(_) {
+        this._moved = true;
     }
 }

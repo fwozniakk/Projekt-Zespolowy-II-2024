@@ -1,4 +1,4 @@
-import { AvailablePositions, FENChar, Side, Move } from "./models";
+import { AvailablePositions, FENChar, Side, Move, CheckState } from "./models";
 import { Bishop } from "./unit/bishops";
 import { King } from "./unit/king";
 import { Knight } from "./unit/knight";
@@ -12,7 +12,7 @@ export class Board {
     private _playerSide = Side.White;
     private readonly boardSize: number = 8;
     private _availablePositions: AvailablePositions;
-
+    private _checkState: CheckState = { isInCheck: false };
 
     constructor() {
         this.board = this.initializeBoard();
@@ -23,12 +23,11 @@ export class Board {
         const createRow = (side: Side, pieces: (new (side: Side) => Unit)[]): (Unit | null)[] =>
             pieces.map(piece => new piece(side));
 
-
         return [
             createRow(Side.White, [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]),
-            Array(8).fill(new Pawn(Side.White)),
-            ...Array(4).fill(Array(8).fill(null)),
-            Array(8).fill(new Pawn(Side.Black)),
+            Array(8).fill(null).map(() => new Pawn(Side.White)),
+            ...Array(4).fill(null).map(() => Array(8).fill(null)),
+            Array(8).fill(null).map(() => new Pawn(Side.Black)),
             createRow(Side.Black, [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook])
         ];
     }
@@ -37,10 +36,12 @@ export class Board {
         return this._playerSide;
     }
 
-    public get playerBoard(): (FENChar|null)[][] {
-        return this.board.map(x => {
-            return x.map(y => y instanceof Unit ? y.fenChar : null)
-        })
+    public get playerBoard(): (FENChar | null)[][] {
+        return this.board.map(row => row.map(unit => (unit instanceof Unit ? unit.fenChar : null)));
+    }
+
+    public get checkState(): CheckState {
+        return this._checkState;
     }
 
     public get availablePositions(): AvailablePositions {
@@ -51,30 +52,33 @@ export class Board {
         return x >= 0 && y >= 0 && x < this.boardSize && y < this.boardSize;
     }
 
-    public isInCheckPosition(playerSide: Side): boolean {
+    private isInCheckPosition(playerSide: Side, checkingCurrentPosition = false): boolean {
         for (let x = 0; x < this.boardSize; x++) {
             for (let y = 0; y < this.boardSize; y++) {
-                const unit: Unit | null = this.board[x][y];
+                const unit = this.board[x][y];
                 if (!unit || unit.side === playerSide) continue;
-    
+
                 for (const { x: dx, y: dy } of unit.moves) {
-                    let newX: number = x + dx;
-                    let newY: number = y + dy;
-    
+                    let newX = x + dx;
+                    let newY = y + dy;
+
                     if (!this.isMovePossible(newX, newY)) continue;
-    
+
                     if (unit instanceof Pawn || unit instanceof King || unit instanceof Knight) {
                         if (unit instanceof Pawn && dy === 0) continue;
-    
-                        const unitThreatened: Unit | null = this.board[newX]?.[newY] ?? null; // Safely access the board
-                        if (unitThreatened instanceof King && unitThreatened.side == playerSide) return true;
+                        const threatenedUnit = this.board[newX][newY];
+                        if (threatenedUnit instanceof King && threatenedUnit.side === playerSide) {
+                            if (checkingCurrentPosition) this._checkState = { isInCheck: true, x: newX, y: newY };
+                            return true;
+                        }
                     } else {
                         while (this.isMovePossible(newX, newY)) {
-                            const unitThreatened: Unit | null = this.board[newX]?.[newY] ?? null;
-                            if (unitThreatened instanceof King && unitThreatened.side == playerSide) return true;
-    
-                            if (unitThreatened !== null) break;
-    
+                            const threatenedUnit = this.board[newX][newY];
+                            if (threatenedUnit instanceof King && threatenedUnit.side === playerSide) {
+                                if (checkingCurrentPosition) this._checkState = { isInCheck: true, x: newX, y: newY };
+                                return true;
+                            }
+                            if (threatenedUnit) break;
                             newX += dx;
                             newY += dy;
                         }
@@ -84,82 +88,92 @@ export class Board {
         }
         return false;
     }
-    
-    private isPositionValidAfter(unit: Unit, prevX: number, prevY: number, newX: number, newY: number): boolean {
-        const newUnit: Unit|null = this.board[newX][newY];
 
-        if(newUnit && newUnit.side === unit.side) return false;
+    private isPositionValidAfter(prevX: number, prevY: number, newX: number, newY: number): boolean {
+        const unit = this.board[prevX][prevY];
+        if (!unit) return false;
+
+        const targetUnit = this.board[newX][newY];
+        if (targetUnit && targetUnit.side === unit.side) return false;
 
         this.board[prevX][prevY] = null;
         this.board[newX][newY] = unit;
-        const isPositionValid: boolean = !this.isInCheckPosition(unit.side);
+
+        const isValid = !this.isInCheckPosition(unit.side);
 
         this.board[prevX][prevY] = unit;
-        this.board[newX][newY] = newUnit;
+        this.board[newX][newY] = targetUnit;
 
-        return isPositionValid;
+        return isValid;
     }
 
     private findAvailablePositions(): AvailablePositions {
-        const availablePositions: AvailablePositions = new Map<string, Move[]>();
+        const availablePositions: AvailablePositions = new Map();
 
         for (let x = 0; x < this.boardSize; x++) {
             for (let y = 0; y < this.boardSize; y++) {
-                const unit: Unit|null = this.board[x][y];
-                if(!unit || unit.side !== this._playerSide) continue;
+                const unit = this.board[x][y];
+                if (!unit || unit.side !== this._playerSide) continue;
 
-                const unitAvailablePositions: Move[] = [];
+                const unitMoves: Move[] = [];
 
-                for (const {x: dx, y: dy} of unit.moves){
-                    let newX: number = x + dx;
-                    let newY: number = y + dy;
+                for (const { x: dx, y: dy } of unit.moves) {
+                    let newX = x + dx;
+                    let newY = y + dy;
 
                     if (!this.isMovePossible(newX, newY)) continue;
 
-                    let newUnit: Unit|null = this.board[newX][newY];
-                    if(newUnit && newUnit.side == unit.side) continue;
+                    const targetUnit = this.board[newX][newY];
+                    if (targetUnit && targetUnit.side === unit.side) continue;
 
-                    // no moving 2 spots or 1 for pawn if there is an unit right in front
                     if (unit instanceof Pawn) {
-                        const direction = unit.side === Side.White ? 1 : -1;
-                    
-                        // ruch dwa pola w przód - tylko z pozycji startowej
-                        if (dx === 2 * direction || dx === -2 * direction) {
-                            const startRow = unit.side === Side.White ? 1 : this.boardSize - 2; 
-                            if (x !== startRow) continue;
-                            if (newUnit) continue; // pole docelowe nie może być zajęte
-                            if (this.board[x + direction][y]) continue; // pole pomiędzy musi być puste
-                        }
-                    
-                        if (dx === direction && dy === 0 && newUnit) continue;
-
-                        if (dx === direction && Math.abs(dy) === 1 && (!newUnit || newUnit.side === unit.side)) continue;
+                        if ((dx === 2 || dx === -2) && (this.board[newX + (dx === 2 ? -1 : 1)][newY] || targetUnit)) continue;
+                        if ((dx === 1 || dx === -1) && dy === 0 && targetUnit) continue;
+                        if (dy !== 0 && (!targetUnit || targetUnit.side === unit.side)) continue;
                     }
 
-
                     if (unit instanceof Pawn || unit instanceof King || unit instanceof Knight) {
-                        if (this.isPositionValidAfter(unit, x, y, newX, newY))
-                            unitAvailablePositions.push({x: newX, y: newY});
+                        if (this.isPositionValidAfter(x, y, newX, newY)) unitMoves.push({ x: newX, y: newY });
                     } else {
-                        while(this.isMovePossible(newX, newY)) {
-                            newUnit = this.board[newX][newY];
-                            if (newUnit && newUnit.side == unit.side) break;
+                        while (this.isMovePossible(newX, newY)) {
+                            const nextUnit = this.board[newX][newY];
+                            if (nextUnit && nextUnit.side === unit.side) break;
 
-                            if (this.isPositionValidAfter(unit, x, y, newX, newY))
-                                unitAvailablePositions.push({x: newX, y: newY});
+                            if (this.isPositionValidAfter(x, y, newX, newY)) unitMoves.push({ x: newX, y: newY });
 
-                            if (newUnit !== null) break;
+                            if (nextUnit) break;
 
                             newX += dx;
                             newY += dy;
                         }
                     }
                 }
-                if (unitAvailablePositions.length) {
-                    availablePositions.set(x + "," + y, unitAvailablePositions);
-                }
+
+                if (unitMoves.length) availablePositions.set(`${x},${y}`, unitMoves);
             }
         }
         return availablePositions;
+    }
+
+    public move(x: number, y: number, newX: number, newY: number): void {
+        if (!this.isMovePossible(x, y) || !this.isMovePossible(newX, newY)) return;
+
+        const unit = this.board[x][y];
+        if (!unit || unit.side !== this._playerSide) return;
+
+        const unitMoves = this._availablePositions.get(`${x},${y}`);
+        if (!unitMoves || !unitMoves.some(move => move.x === newX && move.y === newY)) {
+            throw new Error("Invalid move");
+        }
+
+        if ((unit instanceof Pawn || unit instanceof Rook || unit instanceof King) && !unit.moved) {
+            unit.moved = true;
+        }
+
+        this.board[x][y] = null;
+        this.board[newX][newY] = unit;
+
+        this._playerSide = this._playerSide === Side.White ? Side.Black : Side.White;
+        this._availablePositions = this.findAvailablePositions();
     }
 }

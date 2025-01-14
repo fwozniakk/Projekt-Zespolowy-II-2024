@@ -9,7 +9,7 @@ export class Pawn extends Unit {
         {x: 1, y: -1},
         {x: 1, y: 1},
     ];
-    private _canJump = true;
+    private _moved = false;
 
     constructor(private unitSide: Side){
         super(unitSide);
@@ -17,17 +17,24 @@ export class Pawn extends Unit {
         this._fenChar = unitSide === Side.White ? FENChar.WhitePawn : FENChar.BlackPawn;
     }
 
-    public get canJump(): boolean {
-        return this._canJump;
+    public get moved(): boolean {
+        return this._moved;
     }  
 
-    public set canJump(_) {
-        this._canJump = false;
-        this._moves = [
-            {x: 1, y: 0},
-            {x: 1, y: -1},
-            {x: 1, y: 1},
-        ];
-        if (this.unitSide === Side.Black) this._moves.map(({x, y}) => ({ x: -1 * x, y}));
+    public set moved(_) {
+        this._moved = true;
+        if (this.unitSide === Side.White) {
+            this._moves = [
+                {x: 1, y: 0},
+                {x: 1, y: -1},
+                {x: 1, y: 1},
+            ];
+        } else {
+            this._moves = [
+                {x: -1, y: 0},
+                {x: -1, y: -1},
+                {x: -1, y: 1},
+            ];
+        }
     }
 }

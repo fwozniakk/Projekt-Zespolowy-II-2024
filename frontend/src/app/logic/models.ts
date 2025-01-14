@@ -24,3 +24,15 @@ export enum FENChar {
 }
 
 export type AvailablePositions = Map<string, Move[]>;
+
+type KingChecked = {
+    isInCheck: true;
+    x: number;
+    y: number;
+}
+
+type KingNotChecked = {
+    isInCheck: false;
+}
+
+export type CheckState = KingChecked | KingNotChecked;
