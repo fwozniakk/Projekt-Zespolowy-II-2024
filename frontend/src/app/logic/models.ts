@@ -1,3 +1,5 @@
+import { Unit } from "./unit/unit";
+
 export type Move = {
     x: number;
     y: number;
@@ -36,3 +38,11 @@ type KingNotChecked = {
 }
 
 export type CheckState = KingChecked | KingNotChecked;
+
+export type LastMove = {
+    unit: Unit,
+    prevX: number,
+    prevY: number,
+    currX: number,
+    currY: number,
+}

@@ -176,8 +176,9 @@ export class ClassicChessBoardComponent {
     this.board.move(prevX, prevY, newX, newY);
     this.boardView = this.board.playerBoard;
 
-    this.syncPiecesWithBoardView(); 
+    this.syncUnitsWithBoardViewAfterMove(newX, newY);
     console.log(this.boardView)
+    console.log(this.pieceMeshes)
   }
 
 
@@ -233,7 +234,6 @@ export class ClassicChessBoardComponent {
         console.log(`Selected unit at position (${boardX}, ${boardY}):`, unit);
       } else {
         console.log(`No unit at position (${boardX}, ${boardY})`);
-        //this.clearHighlight();
       }
     } else {
       this.clearHighlight();
@@ -253,64 +253,84 @@ export class ClassicChessBoardComponent {
       n: 'bhorse.glb',
       b: 'bbishop.glb',
       q: 'bqueen.glb',
-      k: 'bking.glb',
+      k: 'vking.glb',
     };
   
     return pieceFiles[piece] || null;
   }
 
-private syncPiecesWithBoardView(): void {
-  const newPieceMeshes = new Map<string, THREE.Mesh>();
+  private syncUnitsWithBoardViewAfterMove(newX: number, newY: number): void {
+    const newPieceMeshes = new Map<string, THREE.Mesh>();
 
-  for (let x = 0; x < this.boardView.length; x++) {
-    for (let z = 0; z < this.boardView[x].length; z++) {
-      const piece = this.boardView[x][z];
-      const key = `${x},${z}`;
+    for (let x = 0; x < this.boardView.length; x++) {
+      for (let z = 0; z < this.boardView[x].length; z++) {
+        const piece = this.boardView[x][z];
+        const key = `${x},${z}`;
+        const destinationKey = `${newX},${newY}`
 
-      if (piece) {
-        if (this.pieceMeshes.has(key)) {
-          // Jeśli model już istnieje, zachowaj go
-          const mesh = this.pieceMeshes.get(key)!;
-          mesh.position.set(x, 0, z); // Ustaw poprawną pozycję
-          newPieceMeshes.set(key, mesh);
-        } else {
-          // Jeśli figura jest nowa, załaduj i dodaj ją
-          const fileName = this.getPieceFile(piece);
-          if (fileName) {
-            this.loader.load(`/${fileName}`, (gltf: any) => {
-              const model = gltf.scene.clone();
-              model.position.set(x, 0, z);
-              model.scale.set(0.8, 0.8, 0.8);
+        if (this.pieceMeshes.has(destinationKey)) {
+          const meshToRemove = this.pieceMeshes.get(destinationKey)!;
+          this.scene.remove(meshToRemove);
+  
+          // Dispose the mesh resources properly
+          if (meshToRemove.geometry) {
+            meshToRemove.geometry.dispose();
+          }
+          if (Array.isArray(meshToRemove.material)) {
+            meshToRemove.material.forEach((mat) => mat.dispose());
+          } else if (meshToRemove.material) {
+            meshToRemove.material.dispose();
+          }
+  
+          // Remove from the pieceMeshes map
+          this.pieceMeshes.delete(destinationKey);
+        }
 
-              this.scene.add(model);
-              newPieceMeshes.set(key, model);
-            });
+        if (piece) {
+          // Jeśli figura już istnieje w 3D
+          if (this.pieceMeshes.has(key)) {
+            const mesh = this.pieceMeshes.get(key)!;
+            mesh.position.set(x, 0, z);  // Ustaw nową pozycję
+            newPieceMeshes.set(key, mesh);
+          } else {
+            // Jeśli figury nie ma w 3D, załaduj ją
+            const fileName = this.getPieceFile(piece);
+            if (fileName) {
+              this.loader.load(`/${fileName}`, (gltf: any) => {
+                const model = gltf.scene.clone();
+                model.position.set(x, 0, z);  // Ustaw pozycję figury
+                model.scale.set(0.8, 0.8, 0.8);
+                this.scene.add(model);
+                newPieceMeshes.set(key, model);
+              });
+            }
           }
         }
       }
     }
+
+    // Usuwanie zbitych figur - sprawdzamy, czy figura powinna zostać usunięta
+    this.pieceMeshes.forEach((mesh, key) => {
+      if (!newPieceMeshes.has(key)) {
+        // Jeśli figura została zbita, usuń ją z 3D
+        this.scene.remove(mesh);
+
+        // Zabezpiecz się przed usunięciem używanych zasobów
+        if (mesh.geometry) {
+          mesh.geometry.dispose();
+        }
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(mat => mat.dispose());
+        } else if (mesh.material) {
+          mesh.material.dispose();
+        }
+
+      }
+    });
+
+    // Zaktualizuj mapę figur
+    this.pieceMeshes = newPieceMeshes;
   }
-
-  // Usuń zbite lub przesunięte figury
-  this.pieceMeshes.forEach((mesh, key) => {
-    if (!newPieceMeshes.has(key)) {
-      this.scene.remove(mesh);
-
-      // Bezpieczne usuwanie geometrii i materiałów
-      if (mesh.geometry) {
-        mesh.geometry.dispose();
-      }
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach(mat => mat.dispose());
-      } else if (mesh.material) {
-        mesh.material.dispose();
-      }
-    }
-  });
-
-  // Zaktualizuj mapę figur
-  this.pieceMeshes = newPieceMeshes;
-}
 
   
   

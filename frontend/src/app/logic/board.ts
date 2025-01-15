@@ -1,4 +1,4 @@
-import { AvailablePositions, FENChar, Side, Move, CheckState } from "./models";
+import { AvailablePositions, FENChar, Side, Move, CheckState, LastMove } from "./models";
 import { Bishop } from "./unit/bishops";
 import { King } from "./unit/king";
 import { Knight } from "./unit/knight";
@@ -13,6 +13,7 @@ export class Board {
     private readonly boardSize: number = 8;
     private _availablePositions: AvailablePositions;
     private _checkState: CheckState = { isInCheck: false };
+    private _lastMove: LastMove | undefined;
 
     constructor() {
         this.board = this.initializeBoard();
