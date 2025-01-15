@@ -27,17 +27,17 @@ export enum FENChar {
 
 export type AvailablePositions = Map<string, Move[]>;
 
-type KingChecked = {
+type KingInCheck = {
     isInCheck: true;
     x: number;
     y: number;
 }
 
-type KingNotChecked = {
+type KingNotInCheck = {
     isInCheck: false;
 }
 
-export type CheckState = KingChecked | KingNotChecked;
+export type CheckState = KingInCheck | KingNotInCheck;
 
 export type LastMove = {
     unit: Unit,

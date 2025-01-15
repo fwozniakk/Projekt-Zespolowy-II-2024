@@ -1,6 +1,6 @@
 import { Component, ElementRef, AfterViewInit, OnDestroy  } from '@angular/core';
 import { Board } from '../../logic/board';
-import { AvailablePositions, FENChar, Move, Side } from '../../logic/models';
+import { AvailablePositions, CheckState, FENChar, LastMove, Move, Side } from '../../logic/models';
 import { CommonModule } from '@angular/common';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -22,6 +22,8 @@ export class ClassicChessBoardComponent {
   private selectedPosition: SelectedPosition = { unit: null };
   private unitAvailablePositions: Move[] = [];
   public get availablePositions(): AvailablePositions { return this.board.availablePositions}
+  private lastMove: LastMove | undefined = this.board.lastMove;
+  private checkState: CheckState = this.board.checkState;
 
 
   private scene!: THREE.Scene;
@@ -157,6 +159,15 @@ export class ClassicChessBoardComponent {
     }
   }
 
+  public isPositionLastMove(x: number, y: number): boolean {
+    if (!this.lastMove) return false;
+    const { prevX, prevY, currX, currY } = this.lastMove;
+    return x === prevX && y === prevY || x === currX && y === currY;
+  }
+
+  public isPositionInCheck(x: number, y: number): boolean {
+    return this.checkState.isInCheck && this.checkState.x === x && this.checkState.y === y;
+  }
 
   public isPositionAvailableForSelectedUnit(x: number, y: number): boolean {
     return this.unitAvailablePositions.some(position => position.x === x && position.y === y)
@@ -175,8 +186,11 @@ export class ClassicChessBoardComponent {
     const { x: prevX, y: prevY } = this.selectedPosition;
     this.board.move(prevX, prevY, newX, newY);
     this.boardView = this.board.playerBoard;
+    this.checkState = this.board.checkState;
+    this.lastMove = this.board.lastMove;
 
     this.syncUnitsWithBoardViewAfterMove(newX, newY);
+    
     console.log(this.boardView)
     console.log(this.pieceMeshes)
   }
@@ -185,7 +199,8 @@ export class ClassicChessBoardComponent {
   private onMouseClick(event: MouseEvent): void {
     const container = this.elRef.nativeElement.querySelector('#chess-board-container');
     const rect = container.getBoundingClientRect();
-  
+
+
     // Calculate mouse position in normalized device coordinates (-1 to +1)
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -208,6 +223,9 @@ export class ClassicChessBoardComponent {
         if (this.isPositionAvailableForSelectedUnit(boardX, boardY)) {
           this.moveUnit(boardX, boardY); // Move the selected piece
           this.clearHighlight();
+          this.highlightLastMove();
+          this.highlightCheck();
+        
           this.selectedPosition = { unit: null }; 
           return;
         }
@@ -272,7 +290,6 @@ export class ClassicChessBoardComponent {
           const meshToRemove = this.pieceMeshes.get(destinationKey)!;
           this.scene.remove(meshToRemove);
   
-          // Dispose the mesh resources properly
           if (meshToRemove.geometry) {
             meshToRemove.geometry.dispose();
           }
@@ -282,7 +299,6 @@ export class ClassicChessBoardComponent {
             meshToRemove.material.dispose();
           }
   
-          // Remove from the pieceMeshes map
           this.pieceMeshes.delete(destinationKey);
         }
 
@@ -350,6 +366,44 @@ export class ClassicChessBoardComponent {
     this.highlightedSquare = square;
   }
 
+  private highlightCheck(): void {
+    if (this.checkState.isInCheck) {
+      const { x, y } = this.checkState;
+      const square = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
+      );
+      if (square && square instanceof THREE.Mesh) {
+        const checkMaterial = new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.8 }); // red for check
+        square.userData['originalMaterial'] = square.material;
+        square.material = checkMaterial;
+      }
+    }
+  }
+
+  private highlightLastMove(): void {
+    if (!this.lastMove) return;
+
+    const { prevX, prevY, currX, currY } = this.lastMove;
+
+    const startSquare = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === prevX && Math.round(child.position.z) === prevY
+    );
+    const endSquare = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === currX && Math.round(child.position.z) === currY
+    );
+
+    [startSquare, endSquare].forEach((square) => {
+        if (square && square instanceof THREE.Mesh) {
+            const lastMoveMaterial = new THREE.MeshBasicMaterial({ color: 0x00FF00, transparent: true, opacity: 0.6 });
+            square.userData['originalMaterial'] = square.material;
+            square.material = lastMoveMaterial;
+        }
+    });
+  }
+
+  
+  
+
   private highlightAvailablePositions(square: THREE.Object3D): void {
     if (square instanceof THREE.Mesh) {
       square.userData['originalMaterial'] = square.material;
@@ -377,7 +431,7 @@ export class ClassicChessBoardComponent {
       }
     }
     this.highlightedSquare = null;
-
+  
     this.highlightedSquares.forEach((square) => {
       if (square instanceof THREE.Mesh) {
         const originalMaterial = square.userData['originalMaterial'];
@@ -392,8 +446,34 @@ export class ClassicChessBoardComponent {
       }
     });
     this.highlightedSquares = [];
-  }
   
+
+    this.clearLastMoveHighlight();
+    // Preserve the check highlight
+    this.highlightCheck();
+  }  
+  
+
+  private clearLastMoveHighlight(): void {
+    if (!this.lastMove) return;
+  
+    const { prevX, prevY, currX, currY } = this.lastMove;
+  
+    const squares = this.chessBoard.children.filter((child: any) => {
+      const x = Math.round(child.position.x);
+      const z = Math.round(child.position.z);
+      return (x === prevX && z === prevY) || (x === currX && z === currY);
+    });
+  
+    squares.forEach((square) => {
+      if (square instanceof THREE.Mesh) {
+        const originalMaterial = square.userData['originalMaterial'];
+        if (originalMaterial) {
+          square.material = originalMaterial; // Przywróć oryginalny materiał
+        }
+      }
+    });
+  }
   
 
   private animate(): void {

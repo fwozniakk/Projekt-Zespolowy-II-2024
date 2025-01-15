@@ -45,12 +45,36 @@ export class Board {
         return this._checkState;
     }
 
+    public get lastMove(): LastMove | undefined {
+        return this._lastMove;
+    }
+
     public get availablePositions(): AvailablePositions {
         return this._availablePositions;
     }
 
     private isMovePossible(x: number, y: number): boolean {
         return x >= 0 && y >= 0 && x < this.boardSize && y < this.boardSize;
+    }
+
+    private canCastle(king: King, kingSideCastle: boolean): boolean {
+        if (king.moved) return false;
+
+        const kingX: number = king.side === Side.White ? 0 : 7;
+        const kingY: number = 4
+        const rookX: number = kingX;
+        const rookY: number = kingSideCastle ? 7 : 0;
+        const rook: Unit | null = this.board[rookX][rookY];
+        if (!(rook instanceof Rook) || rook.moved || this._checkState.isInCheck) return false;
+
+        const firstCastlePosition: number = kingY + (kingSideCastle ? 1 : -1);
+        const secondCastlePosition: number = kingY + (kingSideCastle ? 2 : -2);
+        if (this.board[kingX][firstCastlePosition] || this.board[kingX][secondCastlePosition]) return false;
+
+        if (!kingSideCastle && this.board[kingX][1]) return false;
+
+        return this.isPositionValidAfter(kingX, kingY, kingX, firstCastlePosition) &&
+            this.isPositionValidAfter(kingX, kingY, kingX, secondCastlePosition);
     }
 
     private isInCheckPosition(playerSide: Side, checkingCurrentPosition = false): boolean {
@@ -87,6 +111,7 @@ export class Board {
                 }
             }
         }
+        if (checkingCurrentPosition) this._checkState = { isInCheck: false };
         return false;
     }
 
@@ -149,7 +174,12 @@ export class Board {
                         }
                     }
                 }
-
+                if (unit instanceof King) {
+                    if (this.canCastle(unit, true))
+                        unitMoves.push({x, y: 6});
+                    if (this.canCastle(unit, true))
+                        unitMoves.push({x, y: 2});
+                }
                 if (unitMoves.length) availablePositions.set(`${x},${y}`, unitMoves);
             }
         }
@@ -171,10 +201,26 @@ export class Board {
             unit.moved = true;
         }
 
+        this.handleSpecialMove(unit, x, y, newX, newY);
+
         this.board[x][y] = null;
         this.board[newX][newY] = unit;
 
+        this._lastMove={prevX: x, prevY: y, currX: newX, currY: newY, unit}
         this._playerSide = this._playerSide === Side.White ? Side.Black : Side.White;
+        this.isInCheckPosition(this._playerSide, true);
         this._availablePositions = this.findAvailablePositions();
+    }
+
+    private handleSpecialMove(unit: Unit, x: number, y: number, newX: number, newY: number): void {
+        if (unit instanceof King && Math.abs(newY - y) === 2) {
+            const rookX = x;
+            const rookY = newY > y ? 7 : 0;
+            const rook = this.board[rookX][rookY] as Rook;
+            const rookNewY = newY > y ? 5 : 3;
+            this.board[rookX][rookY] = null;
+            this.board[rookX][rookNewY] = rook;
+            rook.moved = true;
+        }
     }
 }
