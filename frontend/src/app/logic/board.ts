@@ -15,6 +15,9 @@ export class Board {
     private _checkState: CheckState = { isInCheck: false };
     private _lastMove: LastMove | undefined;
 
+    private _isGameOver: boolean = false;
+    private _endMessage: string|undefined = "";
+
     constructor() {
         this.board = this.initializeBoard();
         this._availablePositions = this.findAvailablePositions();
@@ -47,6 +50,14 @@ export class Board {
 
     public get lastMove(): LastMove | undefined {
         return this._lastMove;
+    }
+
+    public get endMessage(): string | undefined {
+        return this._endMessage;
+    }
+
+    public get isGameOver(): boolean {
+        return this._isGameOver;
     }
 
     public get availablePositions(): AvailablePositions {
@@ -188,7 +199,8 @@ export class Board {
         return availablePositions;
     }
 
-    public move(x: number, y: number, newX: number, newY: number): void {
+    public move(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar|null): void {
+        if (this._isGameOver) throw new Error("Game is over.");
         if (!this.isMovePossible(x, y) || !this.isMovePossible(newX, newY)) return;
 
         const unit = this.board[x][y];
@@ -204,6 +216,11 @@ export class Board {
         }
 
         this.handleSpecialMove(unit, x, y, newX, newY);
+        if (promotedUnit) {
+            this.board[newX][newY] = this.promoteUnit(promotedUnit);
+        } else {
+            this.board[newX][newY] = unit;
+        }
 
         this.board[x][y] = null;
         this.board[newX][newY] = unit;
@@ -212,6 +229,7 @@ export class Board {
         this._playerSide = this._playerSide === Side.White ? Side.Black : Side.White;
         this.isInCheckPosition(this._playerSide, true);
         this._availablePositions = this.findAvailablePositions();
+        this._isGameOver = this.hasGameEnded();
     }
 
     private handleSpecialMove(unit: Unit, x: number, y: number, newX: number, newY: number): void {
@@ -252,5 +270,26 @@ export class Board {
         this.board[currX][currY] = unit;
 
         return isPositionValid;
+    }
+
+    private promoteUnit(unitType: FENChar): Knight|Bishop|Rook|Queen {
+        if (unitType === FENChar.WhiteKnight || unitType === FENChar.BlackKnight)
+            return new Knight(this._playerSide);
+        if (unitType === FENChar.WhiteBishop || unitType === FENChar.BlackBishop)
+            return new Bishop(this._playerSide);
+        if (unitType === FENChar.WhiteRook || unitType === FENChar.BlackRook)
+            return new Rook(this._playerSide);
+        return new Queen(this._playerSide);
+    }
+
+    private hasGameEnded(): boolean {
+        if (!this._availablePositions.size) {
+            if (this._checkState.isInCheck) {
+                const winner: string = this._playerSide === Side.White ? "Black" : "White";
+                this._endMessage = `${winner} won by checkmate!`;
+            } else this._endMessage = "Game ended in a stalemate.";
+            return true;
+        }
+        return false;
     }
 }

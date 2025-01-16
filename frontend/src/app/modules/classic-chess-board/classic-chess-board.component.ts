@@ -1,6 +1,6 @@
 import { Component, ElementRef, AfterViewInit, OnDestroy  } from '@angular/core';
 import { Board } from '../../logic/board';
-import { AvailablePositions, CheckState, FENChar, LastMove, Move, Side } from '../../logic/models';
+import { AvailablePositions, CheckState, FENChar, imagePaths, LastMove, Move, Side } from '../../logic/models';
 import { CommonModule } from '@angular/common';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -24,6 +24,11 @@ export class ClassicChessBoardComponent {
   public get availablePositions(): AvailablePositions { return this.board.availablePositions}
   private lastMove: LastMove | undefined = this.board.lastMove;
   private checkState: CheckState = this.board.checkState;
+  public isPromotion: boolean = false;
+  private promotionPosition: Move | null = null;
+  private promotedUnit: FENChar | null = null;
+  public imagePaths = imagePaths;
+  public get message(): string | undefined { return this.board.endMessage } 
 
 
   private scene!: THREE.Scene;
@@ -165,6 +170,12 @@ export class ClassicChessBoardComponent {
     return x === prevX && y === prevY || x === currX && y === currY;
   }
 
+  public promotionUnits(): FENChar[] {
+    return this.playerSide === Side.White ?
+      [FENChar.WhiteKnight, FENChar.WhiteBishop, FENChar.WhiteRook, FENChar.WhiteQueen] :
+      [FENChar.BlackKnight, FENChar.BlackBishop, FENChar.BlackRook, FENChar.BlackQueen];
+  }
+
   public isPositionInCheck(x: number, y: number): boolean {
     return this.checkState.isInCheck && this.checkState.x === x && this.checkState.y === y;
   }
@@ -179,21 +190,87 @@ export class ClassicChessBoardComponent {
     !isWhiteFieldSelected && this.playerSide === Side.White;
   }
 
-  private moveUnit(newX: number, newY: number): void {
-    if (!this.selectedPosition.unit) return;
-    if (!this.isPositionAvailableForSelectedUnit(newX, newY)) return;
-
+  public promoteUnit(unit: FENChar): void {
+    console.log('promocja 1')
+    if (!this.promotionPosition || !this.selectedPosition.unit) {
+      console.log(this.promotionPosition)
+      console.log(this.selectedPosition.unit)
+      return;}
+    this.promotedUnit = unit;
+    console.log("promocja 2")
+    const { x: newX, y: newY } = this.promotionPosition;
     const { x: prevX, y: prevY } = this.selectedPosition;
-    this.board.move(prevX, prevY, newX, newY);
+    this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
+  }
+
+  private updateBoard(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar | null): void {
+    this.board.move(x, y, newX, newY, promotedUnit);
     this.boardView = this.board.playerBoard;
     this.checkState = this.board.checkState;
     this.lastMove = this.board.lastMove;
+    this.removeSelection();
+  }
 
+  public closePromotionDialog(): void {
+    this.removeSelection();
+  }
+
+  public isPromotionPosition(x: number, y: number): boolean {
+    if (!this.promotionPosition) return false;
+    return this.promotionPosition.x === x && this.promotionPosition.y === y;
+  }
+
+  private removeSelection(): void {
+    this.selectedPosition = { unit: null };
+    this.unitAvailablePositions = [];
+
+    if (this.isPromotion) {
+      this.isPromotion = false;
+      this.promotedUnit = null;
+      this.promotionPosition = null;
+    }
+  }
+
+  private moveUnit(newX: number, newY: number): void {
+    this.selectingUnit(newX, newY);
+    if (!this.selectedPosition.unit) return;
+    if (!this.isPositionAvailableForSelectedUnit(newX, newY)) return;
+
+    const isPawn: boolean = this.selectedPosition.unit === FENChar.WhitePawn || this.selectedPosition.unit === FENChar.BlackPawn;
+    const isPawnOnFinishLine: boolean = isPawn && (newX === 7 || newX === 0);
+    const openDialog: boolean = !this.isPromotion && isPawnOnFinishLine;
+
+    if (openDialog) {
+      this.unitAvailablePositions = [];
+      this.isPromotion = true;
+      this.promotionPosition = { x: newX, y: newY };
+
+      this.highlightPromotionPosition();
+      return;
+    }
+
+    const { x: prevX, y: prevY } = this.selectedPosition;
+    this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
     this.syncUnitsWithBoardViewAfterMove(newX, newY);
     
-    console.log(this.boardView)
+    console.log(this.boardView) 
     console.log(this.pieceMeshes)
   }
+
+  private selectingUnit(x: number, y: number): void {
+    if (this.message !== undefined) return;
+    const unit: FENChar | null = this.boardView[x][y];
+    if (!unit) return;
+    if (this.isWrongFieldSelected(unit)) return;
+
+    const isSamePosition: boolean = !!this.selectedPosition.unit && this.selectedPosition.x === x && this.selectedPosition.y === y;
+    this.removeSelection();
+    if (isSamePosition) return;
+
+    this.selectedPosition = { unit, x, y };
+    this.unitAvailablePositions = this.availablePositions.get(x + "," + y) || [];
+  }
+
 
 
   private onMouseClick(event: MouseEvent): void {
@@ -230,6 +307,8 @@ export class ClassicChessBoardComponent {
           return;
         }
       }
+
+      this.removeSelection();
   
       // Optionally handle unit selection
       const unit = this.boardView[boardX][boardY];
@@ -258,7 +337,7 @@ export class ClassicChessBoardComponent {
     }
   }
 
-  private getPieceFile(piece: string): string | null {
+  public getPieceFile(piece: string): string | null {
     const pieceFiles: { [key: string]: string } = {
       P: 'wpawn.glb',
       R: 'wrook.glb',
@@ -273,7 +352,7 @@ export class ClassicChessBoardComponent {
       q: 'bqueen.glb',
       k: 'vking.glb',
     };
-  
+
     return pieceFiles[piece] || null;
   }
 
@@ -380,6 +459,28 @@ export class ClassicChessBoardComponent {
     }
   }
 
+  private highlightPromotionPosition(): void {
+    if (!this.promotionPosition) return;
+  
+    const { x, y } = this.promotionPosition;
+  
+    const promotionSquare = this.chessBoard.children.find(
+      (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
+    );
+  
+    if (promotionSquare && promotionSquare instanceof THREE.Mesh) {
+      const promotionMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xF79824, 
+        transparent: true, 
+        opacity: 0.8 
+      });
+  
+      promotionSquare.userData['originalMaterial'] = promotionSquare.material; // Zapisz oryginalny materiał
+      promotionSquare.material = promotionMaterial; // Ustaw materiał promocyjny
+    }
+  }
+  
+
   private highlightLastMove(): void {
     if (!this.lastMove) return;
 
@@ -446,6 +547,21 @@ export class ClassicChessBoardComponent {
       }
     });
     this.highlightedSquares = [];
+
+    if (this.promotionPosition) {
+      const { x, y } = this.promotionPosition;
+    
+      const promotionSquare = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
+      );
+    
+      if (promotionSquare && promotionSquare instanceof THREE.Mesh) {
+        const originalMaterial = promotionSquare.userData['originalMaterial'];
+        if (originalMaterial) {
+          promotionSquare.material = originalMaterial; // Przywróć oryginalny materiał
+        }
+      }
+    }
   
 
     this.clearLastMoveHighlight();

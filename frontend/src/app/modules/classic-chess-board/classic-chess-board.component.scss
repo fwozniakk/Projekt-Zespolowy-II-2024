@@ -1,0 +1,58 @@
+.promotion-dialog {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap; /* Pozwala obrazom na lepsze rozmieszczenie */
+    background-color: rgba(0, 0, 0, 0.8); /* Opcjonalnie dodaj tło */
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    width: 350px;
+    height: auto; /* Dynamiczna wysokość */
+    position: absolute; /* Aby unosiło się nad planszą */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000; /* Powinno być na wierzchu */
+}
+
+.promotion-dialog img {
+    height: 70px;
+    margin: 5px; /* Dodaj odstępy między obrazami */
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    transition: border-color 0.2s ease-in-out;
+}
+
+.promotion-dialog img:hover {
+    border-color: #FFD700; /* Dodaj efekt hover */
+}
+
+
+.close-promotion-dialog {
+    font-size: 45px;
+    cursor: pointer;
+    color: white;
+}
+
+.game-over-message {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center; 
+    background-color: rgba(0, 0, 0, 0.8); 
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    position: absolute; 
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000; 
+    font-size: 1.5rem; 
+    font-weight: bold;
+    max-width: 350px; 
+    word-wrap: break-word; 
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+}
