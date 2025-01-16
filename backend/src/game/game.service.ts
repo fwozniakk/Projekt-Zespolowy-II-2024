@@ -50,6 +50,6 @@ export class GameService {
     }
     const game = gameEntityToGame(gameEntity[0]);
 
-    return { notation: game.currentBoard.notation, history: game.history };
+    return { startBoard: game.currentBoard.notation, history: game.history };
   }
 }
