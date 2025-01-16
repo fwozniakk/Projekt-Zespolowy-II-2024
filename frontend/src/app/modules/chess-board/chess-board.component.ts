@@ -20,11 +20,12 @@ export class ChessBoardComponent implements OnInit {
   private controls!: OrbitControls;
   
   private gameId: string | undefined;
+  private gamePostId: string | undefined;
   constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
     this.postGame();
-    console.log(this.gameId);
+    this.getGame();
     this.initThree();
     this.createRaumschachBoard();
     this.loadChessPieces();
@@ -33,9 +34,18 @@ export class ChessBoardComponent implements OnInit {
 
   postGame(): void {
     this.apiService.createGame({}).subscribe((data) => {
-      this.gameId = data;
+      this.gamePostId = data;
+      console.log("z post: " + data)
     })
   }
+
+  getGame(): void {
+    this.apiService.getGameById("831217cc-ebcd-4359-8be8-c35350079211").subscribe((data) => {
+      this.gameId = data;
+      console.log("z get: " + data.startBoard);
+    })
+  }
+
 
   private initThree(): void {
     const width = this.canvasContainer.nativeElement.offsetWidth;
