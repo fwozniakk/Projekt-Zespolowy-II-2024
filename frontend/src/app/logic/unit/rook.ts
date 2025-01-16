@@ -9,18 +9,18 @@ export class Rook extends Unit {
         {x: 0, y: 1},
         {x: 0, y: -1},
     ];
-    private _canCastle = false;
+    private _moved = false;
 
     constructor(private unitSide: Side){
         super(unitSide);
         this._fenChar = unitSide === Side.White ? FENChar.WhiteRook : FENChar.BlackRook
     }
 
-    public get canCastle(): boolean {
-        return this._canCastle;
+    public get moved(): boolean {
+        return this._moved;
     }  
 
-    public set canCastle(_) {
-        this._canCastle = true;
+    public set moved(_) {
+        this._moved = true;
     }
 }

@@ -1,6 +1,6 @@
 import { Component, ElementRef, AfterViewInit, OnDestroy  } from '@angular/core';
 import { Board } from '../../logic/board';
-import { AvailablePositions, FENChar, Move, Side } from '../../logic/models';
+import { AvailablePositions, CheckState, FENChar, imagePaths, LastMove, Move, Side } from '../../logic/models';
 import { CommonModule } from '@angular/common';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -22,6 +22,13 @@ export class ClassicChessBoardComponent {
   private selectedPosition: SelectedPosition = { unit: null };
   private unitAvailablePositions: Move[] = [];
   public get availablePositions(): AvailablePositions { return this.board.availablePositions}
+  private lastMove: LastMove | undefined = this.board.lastMove;
+  private checkState: CheckState = this.board.checkState;
+  public isPromotion: boolean = false;
+  private promotionPosition: Move | null = null;
+  private promotedUnit: FENChar | null = null;
+  public imagePaths = imagePaths;
+  public get message(): string | undefined { return this.board.endMessage } 
 
 
   private scene!: THREE.Scene;
@@ -139,18 +146,8 @@ export class ClassicChessBoardComponent {
               model.position.set(x, 0, z);
               model.scale.set(0.8, 0.8, 0.8); 
 
-              /*model.traverse((child: any) => {
-                if (child.isMesh) {
-                  child.material = new THREE.MeshStandardMaterial({
-                    color: piece === piece.toUpperCase() ? 0xffffff : 0x000000,
-                    metalness: 0.5,
-                    roughness: 0.5,
-                  });
-                }
-              });*/
-
               if (piece === 'N') {
-                model.rotation.y = Math.PI / 2; // Obrót konia
+                model.rotation.y = Math.PI / 2; // rotate horse
               } else if (piece === 'n') {
                 model.rotation.y = -Math.PI / 2;
               }
@@ -167,16 +164,120 @@ export class ClassicChessBoardComponent {
     }
   }
 
+  public isPositionLastMove(x: number, y: number): boolean {
+    if (!this.lastMove) return false;
+    const { prevX, prevY, currX, currY } = this.lastMove;
+    return x === prevX && y === prevY || x === currX && y === currY;
+  }
+
+  public promotionUnits(): FENChar[] {
+    return this.playerSide === Side.White ?
+      [FENChar.WhiteKnight, FENChar.WhiteBishop, FENChar.WhiteRook, FENChar.WhiteQueen] :
+      [FENChar.BlackKnight, FENChar.BlackBishop, FENChar.BlackRook, FENChar.BlackQueen];
+  }
+
+  public isPositionInCheck(x: number, y: number): boolean {
+    return this.checkState.isInCheck && this.checkState.x === x && this.checkState.y === y;
+  }
 
   public isPositionAvailableForSelectedUnit(x: number, y: number): boolean {
     return this.unitAvailablePositions.some(position => position.x === x && position.y === y)
   }
 
+  private isWrongFieldSelected(field: FENChar): boolean {
+    const isWhiteFieldSelected: boolean = field === field.toUpperCase();
+    return isWhiteFieldSelected && this.playerSide === Side.Black ||
+    !isWhiteFieldSelected && this.playerSide === Side.White;
+  }
+
+  public promoteUnit(unit: FENChar): void {
+    console.log('promocja 1')
+    if (!this.promotionPosition || !this.selectedPosition.unit) {
+      console.log(this.promotionPosition)
+      console.log(this.selectedPosition.unit)
+      return;}
+    this.promotedUnit = unit;
+    console.log("promocja 2")
+    const { x: newX, y: newY } = this.promotionPosition;
+    const { x: prevX, y: prevY } = this.selectedPosition;
+    this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
+  }
+
+  private updateBoard(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar | null): void {
+    this.board.move(x, y, newX, newY, promotedUnit);
+    this.boardView = this.board.playerBoard;
+    this.checkState = this.board.checkState;
+    this.lastMove = this.board.lastMove;
+    this.removeSelection();
+  }
+
+  public closePromotionDialog(): void {
+    this.removeSelection();
+  }
+
+  public isPromotionPosition(x: number, y: number): boolean {
+    if (!this.promotionPosition) return false;
+    return this.promotionPosition.x === x && this.promotionPosition.y === y;
+  }
+
+  private removeSelection(): void {
+    this.selectedPosition = { unit: null };
+    this.unitAvailablePositions = [];
+
+    if (this.isPromotion) {
+      this.isPromotion = false;
+      this.promotedUnit = null;
+      this.promotionPosition = null;
+    }
+  }
+
+  private moveUnit(newX: number, newY: number): void {
+    this.selectingUnit(newX, newY);
+    if (!this.selectedPosition.unit) return;
+    if (!this.isPositionAvailableForSelectedUnit(newX, newY)) return;
+
+    const isPawn: boolean = this.selectedPosition.unit === FENChar.WhitePawn || this.selectedPosition.unit === FENChar.BlackPawn;
+    const isPawnOnFinishLine: boolean = isPawn && (newX === 7 || newX === 0);
+    const openDialog: boolean = !this.isPromotion && isPawnOnFinishLine;
+
+    if (openDialog) {
+      this.unitAvailablePositions = [];
+      this.isPromotion = true;
+      this.promotionPosition = { x: newX, y: newY };
+
+      this.highlightPromotionPosition();
+      return;
+    }
+
+    const { x: prevX, y: prevY } = this.selectedPosition;
+    this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
+    this.syncUnitsWithBoardViewAfterMove(newX, newY);
+    
+    console.log(this.boardView) 
+    console.log(this.pieceMeshes)
+  }
+
+  private selectingUnit(x: number, y: number): void {
+    if (this.message !== undefined) return;
+    const unit: FENChar | null = this.boardView[x][y];
+    if (!unit) return;
+    if (this.isWrongFieldSelected(unit)) return;
+
+    const isSamePosition: boolean = !!this.selectedPosition.unit && this.selectedPosition.x === x && this.selectedPosition.y === y;
+    this.removeSelection();
+    if (isSamePosition) return;
+
+    this.selectedPosition = { unit, x, y };
+    this.unitAvailablePositions = this.availablePositions.get(x + "," + y) || [];
+  }
+
+
 
   private onMouseClick(event: MouseEvent): void {
     const container = this.elRef.nativeElement.querySelector('#chess-board-container');
     const rect = container.getBoundingClientRect();
-  
+
+
     // Calculate mouse position in normalized device coordinates (-1 to +1)
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -195,11 +296,24 @@ export class ClassicChessBoardComponent {
       const boardX = Math.round(x);
       const boardY = Math.round(z);
   
-      // Highlight the board square
+      if (this.selectedPosition.unit) {
+        if (this.isPositionAvailableForSelectedUnit(boardX, boardY)) {
+          this.moveUnit(boardX, boardY); // Move the selected piece
+          this.clearHighlight();
+          this.highlightLastMove();
+          this.highlightCheck();
+        
+          this.selectedPosition = { unit: null }; 
+          return;
+        }
+      }
+
+      this.removeSelection();
   
       // Optionally handle unit selection
       const unit = this.boardView[boardX][boardY];
-      if (unit) {
+      
+      if (unit && !this.isWrongFieldSelected(unit)) {
         this.highlightSquare(intersectedSquare);
         this.selectedPosition = { unit, x: boardX, y: boardY };
         this.unitAvailablePositions = this.availablePositions.get(boardX + "," + boardY) || [];
@@ -217,12 +331,103 @@ export class ClassicChessBoardComponent {
         console.log(`Selected unit at position (${boardX}, ${boardY}):`, unit);
       } else {
         console.log(`No unit at position (${boardX}, ${boardY})`);
-        //this.clearHighlight();
       }
     } else {
       this.clearHighlight();
     }
   }
+
+  public getPieceFile(piece: string): string | null {
+    const pieceFiles: { [key: string]: string } = {
+      P: 'wpawn.glb',
+      R: 'wrook.glb',
+      N: 'whorse.glb',
+      B: 'wbishop.glb',
+      Q: 'wqueen.glb',
+      K: 'wking.glb',
+      p: 'bpawn.glb',
+      r: 'brook.glb',
+      n: 'bhorse.glb',
+      b: 'bbishop.glb',
+      q: 'bqueen.glb',
+      k: 'vking.glb',
+    };
+
+    return pieceFiles[piece] || null;
+  }
+
+  private syncUnitsWithBoardViewAfterMove(newX: number, newY: number): void {
+    const newPieceMeshes = new Map<string, THREE.Mesh>();
+
+    for (let x = 0; x < this.boardView.length; x++) {
+      for (let z = 0; z < this.boardView[x].length; z++) {
+        const piece = this.boardView[x][z];
+        const key = `${x},${z}`;
+        const destinationKey = `${newX},${newY}`
+
+        if (this.pieceMeshes.has(destinationKey)) {
+          const meshToRemove = this.pieceMeshes.get(destinationKey)!;
+          this.scene.remove(meshToRemove);
+  
+          if (meshToRemove.geometry) {
+            meshToRemove.geometry.dispose();
+          }
+          if (Array.isArray(meshToRemove.material)) {
+            meshToRemove.material.forEach((mat) => mat.dispose());
+          } else if (meshToRemove.material) {
+            meshToRemove.material.dispose();
+          }
+  
+          this.pieceMeshes.delete(destinationKey);
+        }
+
+        if (piece) {
+          // Jeśli figura już istnieje w 3D
+          if (this.pieceMeshes.has(key)) {
+            const mesh = this.pieceMeshes.get(key)!;
+            mesh.position.set(x, 0, z);  // Ustaw nową pozycję
+            newPieceMeshes.set(key, mesh);
+          } else {
+            // Jeśli figury nie ma w 3D, załaduj ją
+            const fileName = this.getPieceFile(piece);
+            if (fileName) {
+              this.loader.load(`/${fileName}`, (gltf: any) => {
+                const model = gltf.scene.clone();
+                model.position.set(x, 0, z);  // Ustaw pozycję figury
+                model.scale.set(0.8, 0.8, 0.8);
+                this.scene.add(model);
+                newPieceMeshes.set(key, model);
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Usuwanie zbitych figur - sprawdzamy, czy figura powinna zostać usunięta
+    this.pieceMeshes.forEach((mesh, key) => {
+      if (!newPieceMeshes.has(key)) {
+        // Jeśli figura została zbita, usuń ją z 3D
+        this.scene.remove(mesh);
+
+        // Zabezpiecz się przed usunięciem używanych zasobów
+        if (mesh.geometry) {
+          mesh.geometry.dispose();
+        }
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(mat => mat.dispose());
+        } else if (mesh.material) {
+          mesh.material.dispose();
+        }
+
+      }
+    });
+
+    // Zaktualizuj mapę figur
+    this.pieceMeshes = newPieceMeshes;
+  }
+
+  
   
   private highlightedSquare: THREE.Object3D | null = null;
   private highlightedSquares: THREE.Object3D[] = [];
@@ -239,6 +444,66 @@ export class ClassicChessBoardComponent {
   
     this.highlightedSquare = square;
   }
+
+  private highlightCheck(): void {
+    if (this.checkState.isInCheck) {
+      const { x, y } = this.checkState;
+      const square = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
+      );
+      if (square && square instanceof THREE.Mesh) {
+        const checkMaterial = new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.8 }); // red for check
+        square.userData['originalMaterial'] = square.material;
+        square.material = checkMaterial;
+      }
+    }
+  }
+
+  private highlightPromotionPosition(): void {
+    if (!this.promotionPosition) return;
+  
+    const { x, y } = this.promotionPosition;
+  
+    const promotionSquare = this.chessBoard.children.find(
+      (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
+    );
+  
+    if (promotionSquare && promotionSquare instanceof THREE.Mesh) {
+      const promotionMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xF79824, 
+        transparent: true, 
+        opacity: 0.8 
+      });
+  
+      promotionSquare.userData['originalMaterial'] = promotionSquare.material; // Zapisz oryginalny materiał
+      promotionSquare.material = promotionMaterial; // Ustaw materiał promocyjny
+    }
+  }
+  
+
+  private highlightLastMove(): void {
+    if (!this.lastMove) return;
+
+    const { prevX, prevY, currX, currY } = this.lastMove;
+
+    const startSquare = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === prevX && Math.round(child.position.z) === prevY
+    );
+    const endSquare = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === currX && Math.round(child.position.z) === currY
+    );
+
+    [startSquare, endSquare].forEach((square) => {
+        if (square && square instanceof THREE.Mesh) {
+            const lastMoveMaterial = new THREE.MeshBasicMaterial({ color: 0x00FF00, transparent: true, opacity: 0.6 });
+            square.userData['originalMaterial'] = square.material;
+            square.material = lastMoveMaterial;
+        }
+    });
+  }
+
+  
+  
 
   private highlightAvailablePositions(square: THREE.Object3D): void {
     if (square instanceof THREE.Mesh) {
@@ -267,7 +532,7 @@ export class ClassicChessBoardComponent {
       }
     }
     this.highlightedSquare = null;
-
+  
     this.highlightedSquares.forEach((square) => {
       if (square instanceof THREE.Mesh) {
         const originalMaterial = square.userData['originalMaterial'];
@@ -282,8 +547,49 @@ export class ClassicChessBoardComponent {
       }
     });
     this.highlightedSquares = [];
-  }
+
+    if (this.promotionPosition) {
+      const { x, y } = this.promotionPosition;
+    
+      const promotionSquare = this.chessBoard.children.find(
+        (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
+      );
+    
+      if (promotionSquare && promotionSquare instanceof THREE.Mesh) {
+        const originalMaterial = promotionSquare.userData['originalMaterial'];
+        if (originalMaterial) {
+          promotionSquare.material = originalMaterial; // Przywróć oryginalny materiał
+        }
+      }
+    }
   
+
+    this.clearLastMoveHighlight();
+    // Preserve the check highlight
+    this.highlightCheck();
+  }  
+  
+
+  private clearLastMoveHighlight(): void {
+    if (!this.lastMove) return;
+  
+    const { prevX, prevY, currX, currY } = this.lastMove;
+  
+    const squares = this.chessBoard.children.filter((child: any) => {
+      const x = Math.round(child.position.x);
+      const z = Math.round(child.position.z);
+      return (x === prevX && z === prevY) || (x === currX && z === currY);
+    });
+  
+    squares.forEach((square) => {
+      if (square instanceof THREE.Mesh) {
+        const originalMaterial = square.userData['originalMaterial'];
+        if (originalMaterial) {
+          square.material = originalMaterial; // Przywróć oryginalny materiał
+        }
+      }
+    });
+  }
   
 
   private animate(): void {
