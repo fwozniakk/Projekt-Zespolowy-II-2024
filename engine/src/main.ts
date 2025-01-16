@@ -5,13 +5,19 @@ type shortType = "p" | "r" | "n" | "b" | "q" | "k" | "u";
 type color = "white" | "black";
 
 export class Position {
-  alphabet = "abcde";
+  private static alphabet: string = "abcde";
   constructor(public x: number, public y: number, public z: number) {}
   toString() {
-    const z = this.alphabet[this.z - 1].toUpperCase();
+    const z = Position.alphabet[this.z - 1].toUpperCase();
     const y = this.y.toString();
-    const x = this.alphabet[this.x - 1];
+    const x = Position.alphabet[this.x - 1];
     return z+x+y; 
+  }
+  public static fromString(str: string) {
+    const z = this.alphabet.indexOf(str[0].toLowerCase()) + 1;
+    const y = parseInt(str[1]);
+    const x = this.alphabet.indexOf(str[2]) + 1;
+    return new Position(x, y, z);
   }
 }
 
@@ -44,6 +50,13 @@ class Piece extends Position {
 
 export class Move {
   constructor(public from: Position, public to: Position) {}
+  toString() {
+    return `${this.from.toString()} -> ${this.to.toString()}`;
+  }
+  public static fromString(str: string) {
+    const [from, to] = str.split(" -> ");
+    return new Move(Position.fromString(from), Position.fromString(to));
+  }
 }
 
 export class Board {
@@ -439,6 +452,36 @@ export class Board {
       }
     }
     return false;
+  }
+}
+
+export class Game {
+  currentBoard: Board;
+  constructor(public startBoard: Board = new Board(), public history: Move[] = []) {
+    this.startBoard = new Board();
+    this.history = history;
+    let tempBoard = this.startBoard;
+    for (const move of this.history) {
+      tempBoard = tempBoard.applyMove(move);
+    }
+    this.currentBoard = tempBoard;
+  }
+  makeMove(move: Move) {
+    this.history.push(move);
+    this.currentBoard = this.currentBoard.applyMove(move);
+  }
+  save(): string {
+    const result = {
+      startNotation: this.startBoard.notation,
+      history: this.history.map((m: Move)=> m.toString()),
+    }
+    return JSON.stringify(result);
+  }
+  public load(json: string) {
+    const result = JSON.parse(json);
+    const startBoard = new Board({startNotation: result.startBoard});
+    const history = result.history.map((m: string) => Move.fromString(m))
+    return new Game(startBoard, history);
   }
 }
 
