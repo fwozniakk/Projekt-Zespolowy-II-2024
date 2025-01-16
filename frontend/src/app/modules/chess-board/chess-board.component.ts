@@ -2,6 +2,7 @@ import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { ApiService } from '../../api.service';
 
 @Component({
   selector: 'app-chess-board',
@@ -17,12 +18,23 @@ export class ChessBoardComponent implements OnInit {
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
   private controls!: OrbitControls;
+  
+  private gameId: string | undefined;
+  constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
+    this.postGame();
+    console.log(this.gameId);
     this.initThree();
     this.createRaumschachBoard();
     this.loadChessPieces();
     this.animate();
+  }
+
+  postGame(): void {
+    this.apiService.createGame({}).subscribe((data) => {
+      this.gameId = data;
+    })
   }
 
   private initThree(): void {
