@@ -6,7 +6,7 @@ export class GameController {
   constructor(private readonly gameService: GameService) {}
 
   @Post()
-  async createGame(@Query('bot') bot: string | undefined): Promise<string> {
+  async createGame(@Query('bot') bot: string | undefined) {
     console.log(bot);
     if (bot && bot === 'true') {
       return await this.gameService.createGame(true);
