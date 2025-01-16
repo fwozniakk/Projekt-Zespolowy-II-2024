@@ -34,7 +34,7 @@ export class GameService {
         bot: bot,
       });
     });
-    return id;
+    return { id: id };
   }
 
   async getGames() {
