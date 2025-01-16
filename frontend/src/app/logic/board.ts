@@ -179,6 +179,8 @@ export class Board {
                         unitMoves.push({x, y: 6});
                     if (this.canCastle(unit, true))
                         unitMoves.push({x, y: 2});
+                } else if (unit instanceof Pawn && this.canEnPassant(unit, x, y)) {
+                    unitMoves.push({x: x + (unit.side === Side.White ? 1 : -1), y: this._lastMove!.prevY});
                 }
                 if (unitMoves.length) availablePositions.set(`${x},${y}`, unitMoves);
             }
@@ -221,6 +223,34 @@ export class Board {
             this.board[rookX][rookY] = null;
             this.board[rookX][rookNewY] = rook;
             rook.moved = true;
+        } else if (
+            unit instanceof Pawn && this._lastMove && this._lastMove.unit instanceof Pawn &&
+            Math.abs(this._lastMove.currX - this._lastMove.prevX) === 2 &&
+            x === this._lastMove.currX && newY === this._lastMove.currY
+        ) {
+            this.board[this._lastMove.currX][this._lastMove.currY] = null;
         }
+    }
+
+    private canEnPassant(pawn: Pawn, pawnX: number, pawnY: number): boolean {
+        if (!this._lastMove) return false;
+        const {unit, prevX, prevY, currX, currY} = this._lastMove;
+
+        if (
+            !(unit instanceof Pawn) ||
+            pawn.side !== this._playerSide ||
+            Math.abs(currX - prevX) !==2 ||
+            pawnX !== currX ||
+            Math.abs(pawnY - currY) !== 1
+        ) return false;
+
+        const pawnNewX = pawnX + (pawn.side === Side.White ? 1 : -1);
+        const pawnNewY = currY;
+
+        this.board[currX][currY] = null;
+        const isPositionValid = this.isPositionValidAfter(pawnX, pawnY, pawnNewX, pawnNewY);
+        this.board[currX][currY] = unit;
+
+        return isPositionValid;
     }
 }
