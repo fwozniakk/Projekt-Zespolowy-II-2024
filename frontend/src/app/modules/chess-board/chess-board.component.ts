@@ -35,7 +35,7 @@ export class ChessBoardComponent implements OnInit {
   postGame(): void {
     this.apiService.createGame({}).subscribe((data) => {
       this.gamePostId = data;
-      console.log("z post: " + data)
+      console.log("z post: " + data.id)
     })
   }
 

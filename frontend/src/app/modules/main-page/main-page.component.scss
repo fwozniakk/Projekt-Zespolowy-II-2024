@@ -1,0 +1,54 @@
+nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background-color: #070911; 
+  padding: 15px 30px; 
+  border-radius: 8px; 
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 100%;
+}
+
+.nav-list {
+  list-style-type: none;
+  display: flex;
+  justify-content: center;
+  gap: 100px; /* Odstęp między kartami */
+  margin: 0;
+  padding: 0;
+}
+
+
+.nav-link {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2c3e50;
+  width: 200px;
+  height: 250px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s, box-shadow 0.3s; /* Dodanie efektu animacji */
+  cursor: pointer;
+  text-decoration: none;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  text-transform: uppercase;
+  transition: color 0.3s, transform 0.3s;
+  border-radius: 5px;
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.nav-link:hover {
+  color: #ffd000;
+  transform: scale(1.1);
+}
+
