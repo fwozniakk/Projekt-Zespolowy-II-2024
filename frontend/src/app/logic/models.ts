@@ -47,14 +47,14 @@ export type LastMove = {
     currY: number,
 }
 
-export const imagePaths: Readonly<Record<FENChar, string>> = {
-    [FENChar.WhitePawn]: "",
+export const imagePaths: Readonly<Record<any, string>> = {
+    [FENChar.WhitePawn]: "LightPawn.webp",
     [FENChar.WhiteKnight]: "LightKnight.webp",
     [FENChar.WhiteBishop]: "LightBishop.webp",
     [FENChar.WhiteRook]: "LightRook.webp",
     [FENChar.WhiteQueen]: "LightQueen.webp",
     [FENChar.WhiteKing]: "",
-    [FENChar.BlackPawn]: "",
+    [FENChar.BlackPawn]: "BlackPawn.webp",
     [FENChar.BlackKnight]: "DarkKnight.webp",
     [FENChar.BlackBishop]: "DarkBishop.webp",
     [FENChar.BlackRook]: "DarkRook.webp",

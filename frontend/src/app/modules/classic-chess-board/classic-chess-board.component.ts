@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { SelectedPosition } from './models';
+import { ClassicChessBoardService } from './classic-chess-board.service';
+import { FENConverter } from '../../logic/FENConverter';
 
 
 @Component({
@@ -41,7 +43,7 @@ export class ClassicChessBoardComponent {
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
 
-  constructor(private elRef: ElementRef) {}
+  constructor(private elRef: ElementRef, protected ClassicChessBoardService: ClassicChessBoardService) {}
 
   ngAfterViewInit(): void {
     this.initScene();
@@ -53,6 +55,7 @@ export class ClassicChessBoardComponent {
 
   ngOnDestroy(): void {
     this.renderer.dispose();
+    this.ClassicChessBoardService.chessBoardState$.next(FENConverter.initalPosition);
     window.removeEventListener('click', this.onMouseClick.bind(this));
   }
 
@@ -203,12 +206,13 @@ export class ClassicChessBoardComponent {
     this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
   }
 
-  private updateBoard(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar | null): void {
+  protected updateBoard(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar | null): void {
     this.board.move(x, y, newX, newY, promotedUnit);
     this.boardView = this.board.playerBoard;
     this.checkState = this.board.checkState;
     this.lastMove = this.board.lastMove;
     this.removeSelection();
+    this.ClassicChessBoardService.chessBoardState$.next(this.board.boardFEN);
   }
 
   public closePromotionDialog(): void {
@@ -332,8 +336,6 @@ export class ClassicChessBoardComponent {
       } else {
         console.log(`No unit at position (${boardX}, ${boardY})`);
       }
-    } else {
-      this.clearHighlight();
     }
   }
 
