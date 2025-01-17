@@ -8,9 +8,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 function gameEntityToGame(gameEntity: GameEntity): Game {
   const game = new Game(
     new Board({ startNotation: gameEntity.startNotation }),
-    JSON.parse(gameEntity.history).forEach((element: string) =>
-      Move.fromString(element),
-    ),
+    JSON.parse(gameEntity.history).map((element: string) => {
+      const move = Move.fromString(element);
+      return move;
+    }),
   );
   return game;
 }
@@ -50,6 +51,27 @@ export class GameService {
     }
     const game = gameEntityToGame(gameEntity[0]);
 
-    return { startBoard: game.currentBoard.notation, history: game.history };
+    return {
+      startBoard: game.currentBoard.notation,
+      history: game.history.map((m: Move) => m.toString()),
+    };
+  }
+
+  async makeMove(id: string, move: string) {
+    const gameEntity = await this.usersRepository.findBy({ id: id });
+    if (!gameEntity) {
+      throw new NotFoundException();
+    }
+    const game = gameEntityToGame(gameEntity[0]);
+    game.makeMove(Move.fromString(move));
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(
+        GameEntity,
+        { id: id },
+        {
+          history: JSON.stringify(game.history.map((m: Move) => m.toString())),
+        },
+      );
+    });
   }
 }

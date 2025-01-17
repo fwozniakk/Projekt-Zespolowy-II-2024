@@ -23,4 +23,9 @@ export class GameController {
   async findGame(@Param('id') id: string) {
     return await this.gameService.getGame(id);
   }
+
+  @Post(':id')
+  async makeMove(@Param('id') id: string, @Query('move') move: string) {
+    return await this.gameService.makeMove(id, move);
+  }
 }

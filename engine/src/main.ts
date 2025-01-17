@@ -11,7 +11,7 @@ export class Position {
     const z = Position.alphabet[this.z - 1].toUpperCase();
     const y = this.y.toString();
     const x = Position.alphabet[this.x - 1];
-    return z+x+y; 
+    return z+y+x; 
   }
   public static fromString(str: string) {
     const z = this.alphabet.indexOf(str[0].toLowerCase()) + 1;
