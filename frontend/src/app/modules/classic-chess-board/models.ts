@@ -11,3 +11,5 @@ type EmptyPosition = {
 }
 
 export type SelectedPosition = PositionWithUnit | EmptyPosition;
+
+export const columns = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
