@@ -6,6 +6,7 @@ import { MainPageComponent } from './modules/main-page/main-page.component';
 export const routes: Routes = [
     { path: 'classic', component: ClassicChessBoardComponent },
     { path: 'raumschach', component: ChessBoardComponent },
-    { path: 'main', component: MainPageComponent },
-    { path: '', redirectTo: '/main', pathMatch: 'full'},
+    { path: '', component: MainPageComponent },
+    { path: '', redirectTo: '/', pathMatch: 'full'},
+    { path: '**', redirectTo: '/' } 
 ];

@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:3000'
+  private apiUrl = 'http://localhost:3000/game'
 
   constructor(private http: HttpClient) { }
 
@@ -15,6 +15,6 @@ export class ApiService {
   }
 
   getGameById(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/game/${id}`)
+    return this.http.get(`${this.apiUrl}/${id}`)
   }
 }
