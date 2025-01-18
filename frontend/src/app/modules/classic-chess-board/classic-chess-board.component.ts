@@ -203,7 +203,6 @@ export class ClassicChessBoardComponent {
   }
 
   protected updateBoard(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar | null): void {
-    console.log("UPDATE BOARD")
     this.clearHighlight();
     this.clearLastMoveHighlight();
     this.board.move(x, y, newX, newY, promotedUnit);
@@ -215,7 +214,7 @@ export class ClassicChessBoardComponent {
     this.removeSelection();
     this.ClassicChessBoardService.chessBoardState$.next(this.board.boardFEN);
     this.syncUnitsWithBoardViewAfterMove(newX, newY);
-    this.clearLastMoveHighlight();
+    //this.clearLastMoveHighlight();
   }
 
   public closePromotionDialog(): void {
@@ -231,7 +230,6 @@ export class ClassicChessBoardComponent {
     this.selectedPosition = { unit: null };
     this.unitAvailablePositions = [];
 
-    console.log("REMOVE SELECTION")
 
     if (this.isPromotion) {
       this.isPromotion = false;
@@ -244,7 +242,6 @@ export class ClassicChessBoardComponent {
     this.selectingUnit(newX, newY);
     if (!this.selectedPosition.unit) return;
     if (!this.isPositionAvailableForSelectedUnit(newX, newY)) return;
-    console.log("MOVE UNIT")
 
     const isPawn: boolean = this.selectedPosition.unit === FENChar.WhitePawn || this.selectedPosition.unit === FENChar.BlackPawn;
     const isPawnOnFinishLine: boolean = isPawn && (newX === 7 || newX === 0);
@@ -254,14 +251,12 @@ export class ClassicChessBoardComponent {
       this.unitAvailablePositions = [];
       this.isPromotion = true;
       this.promotionPosition = { x: newX, y: newY };
-      console.log("MOVE UNIT IF OPEN DIALOG")
       this.highlightPromotionPosition();
       return;
     }
 
     const { x: prevX, y: prevY } = this.selectedPosition;
     this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
-    console.log(this.boardView);
   }
 
   private selectingUnit(x: number, y: number): void {
@@ -270,7 +265,6 @@ export class ClassicChessBoardComponent {
     if (!unit) return;
     if (this.isWrongFieldSelected(unit)) return;
 
-    console.log("SELECTING UNIT")
     const isSamePosition: boolean = !!this.selectedPosition.unit && this.selectedPosition.x === x && this.selectedPosition.y === y;
     this.removeSelection();
     if (isSamePosition) return;
@@ -339,8 +333,6 @@ export class ClassicChessBoardComponent {
             this.highlightAvailablePositions(targetSquare);
           }
         });
-        
-        console.log(`Selected unit at position (${boardX}, ${boardY}):`, unit);
       }
     }
   }
