@@ -214,7 +214,6 @@ export class ClassicChessBoardComponent {
     this.removeSelection();
     this.ClassicChessBoardService.chessBoardState$.next(this.board.boardFEN);
     this.syncUnitsWithBoardViewAfterMove(newX, newY);
-    //this.clearLastMoveHighlight();
   }
 
   public closePromotionDialog(): void {
@@ -448,7 +447,23 @@ export class ClassicChessBoardComponent {
     this.highlightedSquare = square;
   }
 
+  private highlightedCheckSquare: THREE.Object3D | null = null;
+
+private clearCheckHighlight(): void {
+  if (this.highlightedCheckSquare && this.highlightedCheckSquare instanceof THREE.Mesh) {
+    const originalMaterial = this.highlightedCheckSquare.userData['originalMaterial'];
+    if (originalMaterial) {
+      this.highlightedCheckSquare.material = originalMaterial;
+    }
+    this.highlightedCheckSquare = null;
+  }
+}
+
+
   private highlightCheck(): void {
+    // Clear any previous check highlights
+    this.clearCheckHighlight();
+  
     if (this.checkState.isInCheck) {
       const { x, y } = this.checkState;
       const square = this.chessBoard.children.find(
@@ -458,9 +473,13 @@ export class ClassicChessBoardComponent {
         const checkMaterial = new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.8 });
         square.userData['originalMaterial'] = square.material;
         square.material = checkMaterial;
+  
+        // Store the square as the currently highlighted check square
+        this.highlightedCheckSquare = square;
       }
     }
   }
+  
 
   private highlightPromotionPosition(): void {
     if (!this.promotionPosition) return;
