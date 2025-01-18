@@ -86,7 +86,7 @@ export class ClassicChessBoardComponent {
     this.controls.dampingFactor = 0.05; 
     this.controls.maxPolarAngle = Math.PI / 2; 
     this.controls.minDistance = 5; 
-    this.controls.maxDistance = 16; 
+    this.controls.maxDistance = 10; 
     this.controls.enablePan = false; // if we want to disable moving the camera 
 
     this.controls.target.copy(boardCenter);
@@ -150,7 +150,7 @@ export class ClassicChessBoardComponent {
               model.scale.set(0.8, 0.8, 0.8); 
 
               if (piece === 'N') {
-                model.rotation.y = Math.PI / 2; // rotate horse
+                model.rotation.y = Math.PI / 2;
               } else if (piece === 'n') {
                 model.rotation.y = -Math.PI / 2;
               }
@@ -208,6 +208,7 @@ export class ClassicChessBoardComponent {
 
   protected updateBoard(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar | null): void {
     this.clearHighlight();
+    this.clearLastMoveHighlight();
     this.board.move(x, y, newX, newY, promotedUnit);
     this.boardView = this.board.playerBoard;
     this.checkState = this.board.checkState;
@@ -306,6 +307,7 @@ export class ClassicChessBoardComponent {
         if (this.isPositionAvailableForSelectedUnit(boardX, boardY)) {
           this.moveUnit(boardX, boardY); // Move the selected piece
           this.clearHighlight();
+          this.clearLastMoveHighlight();
           this.highlightLastMove();
           this.highlightCheck();
         
@@ -414,10 +416,8 @@ export class ClassicChessBoardComponent {
     // Usuwanie zbitych figur - sprawdzamy, czy figura powinna zostać usunięta
     this.pieceMeshes.forEach((mesh, key) => {
       if (!newPieceMeshes.has(key)) {
-        // Jeśli figura została zbita, usuń ją z 3D
         this.scene.remove(mesh);
 
-        // Zabezpiecz się przed usunięciem używanych zasobów
         if (mesh.geometry) {
           mesh.geometry.dispose();
         }
@@ -440,12 +440,10 @@ export class ClassicChessBoardComponent {
   private highlightedSquares: THREE.Object3D[] = [];
   
   private highlightSquare(square: THREE.Object3D): void {
-    this.clearHighlight();
-  
-    // Apply highlight to the square
+    this.clearHighlight()
     if (square instanceof THREE.Mesh) {
-      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xF79824, transparent: true, opacity: 0.95 }); // selection color
-      square.userData['originalMaterial'] = square.material; // Save original material
+      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xF79824, transparent: true, opacity: 0.95 });
+      square.userData['originalMaterial'] = square.material;
       square.material = highlightMaterial;
     }
   
@@ -459,7 +457,7 @@ export class ClassicChessBoardComponent {
         (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
       );
       if (square && square instanceof THREE.Mesh) {
-        const checkMaterial = new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.8 }); // red for check
+        const checkMaterial = new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.8 });
         square.userData['originalMaterial'] = square.material;
         square.material = checkMaterial;
       }
@@ -570,7 +568,6 @@ export class ClassicChessBoardComponent {
       }
     }
   
-    this.clearLastMoveHighlight();
   }  
   
 
