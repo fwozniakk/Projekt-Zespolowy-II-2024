@@ -116,6 +116,7 @@ export class ClassicChessBoardComponent {
         const material = new THREE.MeshBasicMaterial({ color });
         const square = new THREE.Mesh(geometry, material);
         square.position.set(x, 0, z);
+        square.userData['baseMaterial'] = material;
         this.chessBoard.add(square);
       }
     }
@@ -218,6 +219,7 @@ export class ClassicChessBoardComponent {
     this.removeSelection();
     this.ClassicChessBoardService.chessBoardState$.next(this.board.boardFEN);
     this.syncUnitsWithBoardViewAfterMove(newX, newY);
+    this.clearLastMoveHighlight();
   }
 
   public closePromotionDialog(): void {
@@ -260,7 +262,6 @@ export class ClassicChessBoardComponent {
 
     const { x: prevX, y: prevY } = this.selectedPosition;
     this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
-    
     console.log(this.boardView);
   }
 
@@ -584,7 +585,7 @@ export class ClassicChessBoardComponent {
   
     squares.forEach((square) => {
       if (square instanceof THREE.Mesh) {
-        const originalMaterial = square.userData['originalMaterial'];
+        const originalMaterial = square.userData['baseMaterial'];
         if (originalMaterial) {
           square.material = originalMaterial; // Przywróć oryginalny materiał
         }
