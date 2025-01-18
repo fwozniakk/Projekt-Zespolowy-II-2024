@@ -195,13 +195,9 @@ export class ClassicChessBoardComponent {
   }
 
   public promoteUnit(unit: FENChar): void {
-    console.log('promocja 1')
-    if (!this.promotionPosition || !this.selectedPosition.unit) {
-      console.log(this.promotionPosition)
-      console.log(this.selectedPosition.unit)
-      return;}
+    if (!this.promotionPosition || !this.selectedPosition.unit) return;
+    console.log(unit)
     this.promotedUnit = unit;
-    console.log("promocja 2")
     const { x: newX, y: newY } = this.promotionPosition;
     const { x: prevX, y: prevY } = this.selectedPosition;
     this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
@@ -469,7 +465,8 @@ export class ClassicChessBoardComponent {
     if (!this.promotionPosition) return;
   
     const { x, y } = this.promotionPosition;
-  
+    console.log(x)
+    console.log(y)
     const promotionSquare = this.chessBoard.children.find(
       (child: any) => Math.round(child.position.x) === x && Math.round(child.position.z) === y
     );
@@ -515,7 +512,7 @@ export class ClassicChessBoardComponent {
     if (square instanceof THREE.Mesh) {
       square.userData['originalMaterial'] = square.material;
       // add a circle to the center of the square
-      const circleGeometry = new THREE.CircleGeometry(0.3, 32); 
+      const circleGeometry = new THREE.CircleGeometry(0.33, 32); 
       const circleMaterial = new THREE.MeshBasicMaterial({ color: 0xF79824, transparent: true, opacity: 0.7 });
       const circleMesh = new THREE.Mesh(circleGeometry, circleMaterial);
 

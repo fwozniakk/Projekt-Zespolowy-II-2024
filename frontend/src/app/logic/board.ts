@@ -243,7 +243,6 @@ export class Board {
         }
 
         this.board[x][y] = null;
-        this.board[newX][newY] = unit;
 
         this._lastMove={prevX: x, prevY: y, currX: newX, currY: newY, unit}
         this._playerSide = this._playerSide === Side.White ? Side.Black : Side.White;
