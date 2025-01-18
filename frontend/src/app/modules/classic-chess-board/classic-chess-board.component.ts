@@ -207,12 +207,16 @@ export class ClassicChessBoardComponent {
   }
 
   protected updateBoard(x: number, y: number, newX: number, newY: number, promotedUnit: FENChar | null): void {
+    this.clearHighlight();
     this.board.move(x, y, newX, newY, promotedUnit);
     this.boardView = this.board.playerBoard;
     this.checkState = this.board.checkState;
     this.lastMove = this.board.lastMove;
+    this.highlightLastMove();
+    this.highlightCheck();
     this.removeSelection();
     this.ClassicChessBoardService.chessBoardState$.next(this.board.boardFEN);
+    this.syncUnitsWithBoardViewAfterMove(newX, newY);
   }
 
   public closePromotionDialog(): void {
@@ -255,10 +259,8 @@ export class ClassicChessBoardComponent {
 
     const { x: prevX, y: prevY } = this.selectedPosition;
     this.updateBoard(prevX, prevY, newX, newY, this.promotedUnit);
-    this.syncUnitsWithBoardViewAfterMove(newX, newY);
     
-    console.log(this.boardView) 
-    console.log(this.pieceMeshes)
+    console.log(this.boardView);
   }
 
   private selectingUnit(x: number, y: number): void {
@@ -311,8 +313,6 @@ export class ClassicChessBoardComponent {
           return;
         }
       }
-
-      this.removeSelection();
   
       // Optionally handle unit selection
       const unit = this.boardView[boardX][boardY];
@@ -333,8 +333,6 @@ export class ClassicChessBoardComponent {
         });
         
         console.log(`Selected unit at position (${boardX}, ${boardY}):`, unit);
-      } else {
-        console.log(`No unit at position (${boardX}, ${boardY})`);
       }
     }
   }
@@ -397,6 +395,13 @@ export class ClassicChessBoardComponent {
                 const model = gltf.scene.clone();
                 model.position.set(x, 0, z);  // Ustaw pozycję figury
                 model.scale.set(0.8, 0.8, 0.8);
+
+                if (piece === 'N') {
+                  model.rotation.y = Math.PI / 2;
+                } else if (piece === 'n') {
+                  model.rotation.y = -Math.PI / 2;
+                }
+
                 this.scene.add(model);
                 newPieceMeshes.set(key, model);
               });
@@ -565,10 +570,7 @@ export class ClassicChessBoardComponent {
       }
     }
   
-
     this.clearLastMoveHighlight();
-    // Preserve the check highlight
-    this.highlightCheck();
   }  
   
 
