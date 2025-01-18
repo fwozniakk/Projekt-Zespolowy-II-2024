@@ -8,7 +8,7 @@ import { FENChar, Side } from '../../logic/models';
   providedIn: 'root'
 })
 export class StockfishApiService {
-  private readonly api: string = "https://stockfish.online/api/stockfish.php";
+  private readonly api: string = "https://stockfish.online/api/s/v2.php";
 
   constructor(private http: HttpClient) { }
 
@@ -16,8 +16,7 @@ export class StockfishApiService {
   public getBestMove(fen: string): Observable<Move> {
     const queryParams: StockfishQuery = {
       fen,
-      depth: 13,
-      mode: "bestmove"
+      depth: 13
     };
 
     let params = new HttpParams().appendAll(queryParams);
@@ -25,7 +24,8 @@ export class StockfishApiService {
     return this.http.get<StockfishResponse>(this.api, { params })
       .pipe(
         switchMap(response => {
-          const bestMove: string = response.data.split(" ")[1];
+          console.log(response)
+          const bestMove: string = response.bestmove.split(" ")[1];
           return of(this.moveFromStockfishString(bestMove))
         })
       )

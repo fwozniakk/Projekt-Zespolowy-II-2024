@@ -3,7 +3,7 @@ import { FENChar } from "../../logic/models";
 export type StockfishQuery = {
     fen: string,
     depth: number,
-    mode: string,
+    mode?: string,
 }
 
 export type Move = {
@@ -15,6 +15,9 @@ export type Move = {
 }
 
 export type StockfishResponse = {
+    bestmove: string,
     success: boolean,
-    data: string,
+    evaulatuion: number | null,
+    mate: number | null,
+    continuation: string,
 }
